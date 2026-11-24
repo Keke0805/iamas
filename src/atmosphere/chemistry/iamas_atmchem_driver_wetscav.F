@@ -23,6 +23,7 @@
 !************************************************************************
 
 module iamas_atmchem_driver_wetscav
+ use iamas_timer, only: iamas_timer_start, iamas_timer_stop
  use iamas_kind_types
  use iamas_derived_types
  use iamas_pool_routines
@@ -72,6 +73,7 @@ subroutine driver_wetscav(state, diag_physics, time_lev, configs, tend_chemistry
    ! local vars
    real, dimension( kts:kte, its:ite ) :: r2evap, i2evap
    integer :: numgas_aqfrac
+ call iamas_timer_start('wet_state_prepare')
    call iamas_pool_get_config(configs,'config_do_chem_budget' ,config_do_chem_budget )
    !r2evap,i2evap are not important,not used further.
    r2evap(kts:kte,its:ite) = 0.0
@@ -91,7 +93,9 @@ subroutine driver_wetscav(state, diag_physics, time_lev, configs, tend_chemistry
    end if
 
    call chemistry_debug_message('wetscav from iAMAS success')
+ call iamas_timer_stop('wet_state_prepare')
 
+ call iamas_timer_start('wet_scheme')
    call wetscav_cbmz_mosaic (                                                          &
         id = 1,ktau = 1,dtstep = dt_dyn,ktauc = 1,configs = configs,         &
         dtstepc = dt_dyn, alt = alt(kts:kte,its:ite), t_phy = t_phy(kts:kte,its:ite),  &
@@ -107,17 +111,20 @@ subroutine driver_wetscav(state, diag_physics, time_lev, configs, tend_chemistry
         qv = qv(kts:kte,its:ite), qc = qc(kts:kte,its:ite),                            &
         qi = qi(kts:kte,its:ite), qs = qs(kts:kte,its:ite),                            &
         its = its, ite = ite, kts = kts, kte = kte)
+ call iamas_timer_stop('wet_scheme')
       ! Calculate wet deposition of the species by accumulating their (negative)
       ! column change. It is assumed that all precipitation reaches the ground.
 
    call chemistry_debug_message( 'wetscav scheme success')
 
+ call iamas_timer_start('wet_budget_update')
    if (config_do_chem_budget) then
       call iamas_pool_get_array(tend_chemistry,'tend_wetls',tend_wetls)
       tend_wetls(1:num_chem,kts:kte,its:ite) = (chem(1:num_chem,kts:kte,its:ite) - chem_old(1:num_chem,kts:kte,its:ite)) / dt_dyn
    end if
 
    call chemistry_debug_message( 'wetscav to iAMAS success')
+ call iamas_timer_stop('wet_budget_update')
 end subroutine driver_wetscav
 
 END MODULE iamas_atmchem_driver_wetscav

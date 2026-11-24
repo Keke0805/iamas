@@ -1,0 +1,15 @@
+{
+  "sha256": "da809f71abf317ae8c81a7b3a907faa078f30161fa59df12797b43cdd34ff492",
+  "reference_binary": "/home/export/online1/mdt00/shisuan/swlicom1/hk/iamas/precomm-20261118/atmosphere-native-precomm",
+  "new_objects": [
+    "drydep.o",
+    "vertmx_bridge.o",
+    "vertmx_kernel.o"
+  ],
+  "execution_space": "Kokkos DefaultHostExecutionSpace, existing SERIAL library",
+  "modes": {
+    "0": "original Fortran with parent timer",
+    "1": "Kokkos batch",
+    "2": "Kokkos plus full local field comparison against Fortran"
+  }
+}

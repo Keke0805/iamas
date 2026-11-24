@@ -1,0 +1,172 @@
+&nhyd_model
+ config_del4u_div_factor = 1
+ config_apvm_upwinding = 0.5
+    config_time_integration_order = 2
+ config_dt = 90
+ config_photdt = 1800
+ config_chemdt = 3600
+ config_start_time = 2025-11-22_00:00:00
+ config_run_duration = 0_12:00:00
+    config_split_dynamics_transport = true
+ config_include_kinetic_visc = false
+ config_number_of_sub_steps = 2
+    config_dynamics_split_steps = 3
+    config_h_mom_eddy_visc2 = 0.0
+    config_h_mom_eddy_visc4 = 0.0
+    config_v_mom_eddy_visc2 = 0.0
+    config_h_theta_eddy_visc2 = 0.0
+    config_h_theta_eddy_visc4 = 0.0
+    config_v_theta_eddy_visc2 = 0.0
+    config_horiz_mixing = '2d_smagorinsky'
+ config_len_disp = 16000
+    config_visc4_2dsmag = 0.05
+    config_w_adv_order = 3
+    config_theta_adv_order = 3
+    config_scalar_adv_order = 3
+    config_u_vadv_order = 3
+    config_w_vadv_order = 3
+    config_theta_vadv_order = 3
+    config_scalar_vadv_order = 3
+    config_scalar_advection = true
+    config_positive_definite = false
+    config_monotonic = true
+    config_adv_mono_comm = true
+    config_trans_scalar_rk_option = 0
+    config_coef_3rd_order = 0.25
+    config_les_scheme = 'off'
+    config_les_ck = 0.10
+    config_les_ce0 = 0.93
+    config_les_prandtl = 1.0
+    config_les_coeff_mode = 'legacy_volume'
+    config_les_tke_diffusion_mode = 'legacy_km_schmidt'
+    config_les_scalar_schmidt = 1.0
+    config_les_tke_min = 1.0e-6
+    config_les_mix_upper_bound = 0.10
+    config_les_surface_mode = 'physics_flux'
+    config_les_heat_flux = 0.0
+    config_les_drag_coefficient = 0.0
+    config_les_output_budget = true
+    config_les_lbc_tke_mode = 'diagnose'
+    config_epssm = 0.1
+ config_epssm_zb = 30000
+ config_epssm_zt = 80000
+    config_smdiv = 0.1
+/
+&damping
+ config_rayleigh_damp_u = false
+    config_zd = 22000.0
+    config_xnutr = 0.2
+/
+&limited_area
+    config_apply_lbcs = false
+/
+&io
+ config_pio_num_iotasks = 6
+ config_pio_stride = 60
+    config_is_init_atm = false
+    config_io_use_multiple_files = false
+    config_io_do_output_indices = false
+    config_pio_local_num_iotasks = 1
+    config_pio_local_stride = 1
+    config_region_geometry_type = 'none'
+/
+&decomposition
+ config_block_decomp_file_prefix = 'graph.info.part.'
+/
+&restart
+    config_do_restart = false
+/
+&printout
+ config_print_debug_info = false
+ config_print_global_minmax_vel = true
+ config_print_detailed_minmax_vel = false
+/
+&IAU
+    config_IAU_option = 'off'
+    config_IAU_window_length_s = 21600.
+/
+&physics
+ config_topo_shading = 0
+ config_slope_rad = 0
+ config_topo_wind = 0
+ config_build_turb_d = false
+ config_build_turb_n = false
+ config_use_lcz = false
+ is_ah_emis = false
+ config_urban_scheme = 0
+ config_lsm_scheme = 'noah'
+ config_radt_sw_scheme = 'rrtmg_sw'
+ config_radt_lw_scheme = 'rrtmg_lw'
+ config_microp_scheme = 'mp_thompson'
+ config_convection_scheme = 'cu_grell_freitas'
+ isconvection_tstar = false
+ config_o3climatology = true
+ config_gwdo_scheme = 'off'
+ config_radt_cld_scheme = 'cld_fraction'
+ config_sst_update = true
+    config_sstdiurn_update = false
+    config_deepsoiltemp_update = false
+ config_aer_ra_feedback = false
+    config_aer_cloud_droplet_on = true
+    config_aer_cloud_ice_on = true
+    config_radtlw_interval = '00:30:00'
+    config_radtsw_interval = '00:30:00'
+    config_bucket_update = 'none'
+ config_physics_suite = 'convection_permitting'
+    config_fdda_scheme = 'off'
+    config_fdda_int = 21600.
+    config_fdda_scale_min = 0.
+    config_fdda_scale_max = 100000.
+    config_fdda_t = false
+    config_fdda_t_coef = 3.0e-4
+    config_fdda_t_in_pbl = true
+    config_fdda_t_min_layer = 0
+    config_fdda_q = false
+    config_fdda_q_coef = 3.0e-4
+    config_fdda_q_in_pbl = true
+    config_fdda_q_min_layer = 0
+    config_fdda_uv = false
+    config_fdda_uv_coef = 3.0e-4
+    config_fdda_uv_in_pbl = true
+    config_fdda_uv_min_layer = 0
+/
+&chemistry
+    config_do_chem_budget = false
+    config_seas_opt = 3
+ config_dust_opt = "gocart"
+ config_source_opt = 'erod'
+ config_dust_factor = 1.0
+ config_seas_factor = 1.0
+ do_seas_sst_adjust = true
+ config_use_aer_IN = false
+ config_unsoluble_IN_size = 0.5
+ config_soluble_IN_size = 0.1
+    config_gas_drydep_opt = 1
+ config_drydep_on = true
+ config_ctrans_opt = 'general'
+ config_cu_scav_on = true
+ config_wetscav_on = true
+    config_mono_work_coupled = true
+    config_trans_chem_rk_option = 0
+    config_aer_drydep_opt = 101
+ config_chem_opt = 'bin08seas_aq'
+    config_aer_op_opt = 'volume_approx'
+ config_phot_opt = 'no_phot'
+ config_gaschem_opt = 'no_gaschem'
+ config_stra_gaschem_opt = 'no_stra_gaschem'
+    config_linoz_data_file = 'Linoz_March2007.dat'
+ config_cloudchem_opt = 'no_cloudchem'
+ config_aerchem_sia_opt = 'no_sia'
+ config_aerchem_soa_opt = 'no_soa'
+    config_n2o5_hetchem = 0
+    config_diagnostic_opt = 1
+    config_kdepvel = 1
+ config_emis_update = false
+ config_use_anthro_emis = false
+ config_use_bioms_emis = false
+ config_use_fix_gasinit = false
+ config_input_chem = false
+/
+&soundings
+    config_sounding_interval = 'none'
+/

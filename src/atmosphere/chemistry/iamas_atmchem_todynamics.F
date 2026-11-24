@@ -24,6 +24,7 @@
 !************************************************************************
 
 module iamas_atmchem_todynamics
+ use iamas_timer, only: iamas_timer_start, iamas_timer_stop
  use iamas_kind_types
  use iamas_derived_types
  use iamas_pool_routines
@@ -66,12 +67,16 @@ module iamas_atmchem_todynamics
  real(kind=RKIND),dimension(:,:,:),pointer :: tend_chem
 
 !=================================================================================================================
+ call iamas_timer_start('chem_src_get_fields')
  call iamas_pool_get_dimension(mesh, 'nCells',         nCells        )
  call iamas_pool_get_dimension(mesh, 'nCellsSolve',    nCellsSolve   )
  call iamas_pool_get_array(state,'rho_zz',   mass, 2)
  call iamas_pool_get_array(tend ,'chem_tend',tend_chem)
+ call iamas_timer_stop('chem_src_get_fields')
 
+ call iamas_timer_start('chem_src_clear')
  tend_chem(:,:,:) = 0._RKIND
+ call iamas_timer_stop('chem_src_clear')
  call chemistry_get_tend_work(state,nCells,nCellsSolve, &
                            tend_chemistry, &
                            mass,tend_chem  &
@@ -100,7 +105,10 @@ module iamas_atmchem_todynamics
     integer :: i, k, h
  
     ! add this for update chem with emission. @zhxia 0418/2025
+ call iamas_timer_start('chem_src_get_emission')
     call iamas_pool_get_array(tend_chemistry,'tend_emis'     ,tend_emis     )
+ call iamas_timer_stop('chem_src_get_emission')
+ call iamas_timer_start('chem_src_update')
     do h = 1, num_chem
     do i = 1, nCellsSolve
     do k = 1, nVertLevels
@@ -108,6 +116,7 @@ module iamas_atmchem_todynamics
     enddo
     enddo
     enddo
+ call iamas_timer_stop('chem_src_update')
  end subroutine chemistry_get_tend_work
  
 

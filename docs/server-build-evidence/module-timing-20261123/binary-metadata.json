@@ -1,0 +1,40 @@
+{
+  "sha256": "382151ec2a9bb6d866de0fbb5e827abc3d38102bf0e8c2185768c4f4d3311db7",
+  "binary": "/home/export/online1/mdt00/shisuan/swlicom1/hk/iamas/module-timing-20261123/atmosphere-native-module-timing",
+  "reference_binary": "/home/export/online1/mdt00/shisuan/swlicom1/hk/iamas/vertmx-kokkos-20261122/atmosphere-native-vertmx-kokkos",
+  "new_objects": [
+    "/home/export/online1/mdt00/shisuan/swlicom1/hk/iamas/module-timing-20261123/build-sw64/module_mosaic_wetscav.o",
+    "/home/export/online1/mdt00/shisuan/swlicom1/hk/iamas/module-timing-20261123/build-sw64/module_optical_averaging.o",
+    "/home/export/online1/mdt00/shisuan/swlicom1/hk/iamas/module-timing-20261123/build-sw64/iamas_atmchem_todynamics.o",
+    "/home/export/online1/mdt00/shisuan/swlicom1/hk/iamas/module-timing-20261123/build-sw64/iamas_atmchem_driver_wetscav.o",
+    "/home/export/online1/mdt00/shisuan/swlicom1/hk/iamas/module-timing-20261123/build-sw64/iamas_atmchem_driver_emission.o",
+    "/home/export/online1/mdt00/shisuan/swlicom1/hk/iamas/module-timing-20261123/build-sw64/iamas_atmchem_driver_drydep.o",
+    "/home/export/online1/mdt00/shisuan/swlicom1/hk/iamas/module-timing-20261123/build-sw64/iamas_atm_time_integration.o",
+    "/home/export/online1/mdt00/shisuan/swlicom1/hk/iamas/module-timing-20261123/build-sw64/iamas_atmphys_driver_microphysics.o",
+    "/home/export/online1/mdt00/shisuan/swlicom1/hk/iamas/module-timing-20261123/build-sw64/iamas_atmphys_driver.o"
+  ],
+  "reused_vertmx_objects": {
+    "/home/export/online1/mdt00/shisuan/swlicom1/hk/iamas/vertmx-kokkos-20261122/build-sw64/vertmx_bridge.o": "a43b3fe3c9cf70438d04ca3b032a24f51e8f0a98e72aecedb2d26a1764e4a976",
+    "/home/export/online1/mdt00/shisuan/swlicom1/hk/iamas/vertmx-kokkos-20261122/build-sw64/vertmx_kernel.o": "40e7f7d5a8906aea227b7e25a25d0206a85d6ebef9c79b0996423de1979dd111"
+  },
+  "execution_space": "Existing Kokkos Serial on MPE",
+  "numerical_changes": false,
+  "new_timer_labels": 51,
+  "fortran_flags": [
+    "-mieee",
+    "-mftz",
+    "-msimd",
+    "-fopenmp",
+    "-finit-local-zero",
+    "-I/home/export/online1/mdt00/shisuan/swlicom1/hk/iamas/precomm-20261118/build-sw64/iAMAS/module/GNU/7.1.0",
+    "-I/home/export/online1/mdt00/shisuan/swlicom1/hk/iamas/precomm-20261118/build-sw64/iAMAS/module/GNU/7.1.0/core_atmosphere",
+    "-O2",
+    "-g",
+    "-DNDEBUG",
+    "-ffree-line-length-none",
+    "-fdefault-real-8",
+    "-fdefault-double-8",
+    "-fconvert=big-endian",
+    "-fopenmp"
+  ]
+}

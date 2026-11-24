@@ -3607,7 +3607,7 @@ use module_wrf_error
             enddo
             !OMP END SIMD
             !OMP SIMD simdlen(8)
-            !$OMP SIMD ALIGNED(fracs, planklay, planklev, taut, icldlyr:64)
+            !$OMP SIMD ! GCC7: local explicit-shape arrays are not valid ALIGNED list items
             !DIR$ IVDEP
             do lev = 1, nlayers
                ! Clear layer

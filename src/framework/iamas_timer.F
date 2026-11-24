@@ -332,19 +332,15 @@
           call iamas_log_write('    Globals are computed across all threads and processors')
           call iamas_log_write('')
           call iamas_log_write(' Columns:')
-          call iamas_log_write('    total time: Global max of accumulated time spent in timer')
-          call iamas_log_write('    calls: Total number of times this timer was started / stopped.')
-          call iamas_log_write('    min: Global min of time spent in a single start / stop')
-          call iamas_log_write('    max: Global max of time spent in a single start / stop')
-          call iamas_log_write('    avg: Global max of average time spent in a single start / stop')
-          call iamas_log_write('    pct_tot: Percent of the timer at level 1')
-          call iamas_log_write('    pct_par: Percent of the parent timer (one level up)')
-          call iamas_log_write('    par_eff: Parallel efficiency, global average total time / global max total time')
+          call iamas_log_write('    calls(call ranks): total start/stop calls summed over MPI ranks')
+          call iamas_log_write('    local(s): accumulated time on rank 0')
+          call iamas_log_write('    avg/min/max(s): accumulated time averaged/minimum/maximum over MPI ranks')
+          call iamas_log_write('    total%: maximum accumulated section time divided by the root maximum')
           call iamas_log_write('')
           call iamas_log_write('')
 
-          write(msg,'(3x, a10, 34x, a15, a12, a11, a15, a15, a13, a10, a12)') 'timer_name', 'total', 'calls', 'min', 'max', &
-                    'avg', 'pct_tot', 'pct_par', 'par_eff'
+          write(msg,'(1x, a100, 1x, a16, 1x, a14, 1x, a14, 1x, a14, 1x, a14, 1x, a10)') &
+                    'section', 'calls(call ranks)', 'local(s)', 'avg(s)', 'min(s)', 'max(s)', 'total%'
           call iamas_log_write(msg)
 #endif
 
@@ -363,13 +359,14 @@
 !
 !-----------------------------------------------------------------------
        subroutine iamas_timer_write()!{{{
-          type (iamas_timer_node), pointer :: current_timer
-          character (len=StrKIND) :: indentation
+          type (iamas_timer_node), pointer :: current_timer, parent_timer
+          character (len=StrKIND) :: indentation, section
           logical :: next_timer_found
-          integer :: iErr, levels, i, numThreads
+          integer :: iErr, levels, i, numThreads, global_calls
 
           real (kind=RKIND) :: percent_inc, percent_exc, efficiency
           real (kind=RKIND) :: global_time, global_max_total, global_ave_total
+          real (kind=RKIND) :: local_total, global_sum_total, global_min_total, global_max_total_accum, root_total
           character(len=StrKIND) :: msg
 
 #ifdef iAMAS_GPTL_TIMERS
@@ -399,57 +396,36 @@
              end if
 
              if ( .not. current_timer % printed ) then
-                ! Compute average timers for each thread
-                do i = 1, numThreads
-                    current_timer % avg_time(i) = current_timer % total_time(i) / current_timer % calls
-                end do
+                ! Aggregate accumulated timer time across OpenMP threads and MPI ranks.
+                ! The output intentionally matches the requested hotspot table:
+                ! local is rank-0 accumulated time; avg/min/max are across-rank accumulated times.
+                local_total = real(sum(current_timer % total_time(:)), kind=RKIND)
+                call iamas_dmpar_sum_real(timer_root % dminfo, local_total, global_sum_total)
+                call iamas_dmpar_min_real(timer_root % dminfo, local_total, global_min_total)
+                call iamas_dmpar_max_real(timer_root % dminfo, local_total, global_max_total_accum)
+                call iamas_dmpar_sum_int(timer_root % dminfo, current_timer % calls, global_calls)
+                global_ave_total = global_sum_total / real(timer_root % dminfo % nprocs, kind=RKIND)
+                if (levels == 1) root_total = global_max_total_accum
+                percent_inc = global_max_total_accum / max(1.0e-30_RKIND, root_total)
 
-                ! Synchronize timers across threads
-                global_ave_total = sum(current_timer % total_time(:))
-                global_ave_total = global_ave_total / numThreads
-                current_timer % total_time(1) = maxval(current_timer % total_time(:))
-                current_timer % max_time(1) = maxval(current_timer % max_time(:))
-                current_timer % min_time(1) = minval(current_timer % min_time(:))
-                current_timer % avg_time(1) = sum(current_timer % avg_time(:)) / numThreads
-
-                ! Synchronize timers across procs
-                call iamas_dmpar_sum_real(timer_root  % dminfo, global_ave_total, global_time)
-                global_ave_total = global_time / timer_root % dminfo % nprocs
-                call iamas_dmpar_max_real(timer_root % dminfo, real(current_timer % total_time(1), kind=RKIND), global_time)
-                global_max_total = global_time
-                current_timer % total_time(1) = global_time
-                call iamas_dmpar_max_real(timer_root % dminfo, current_timer % max_time(1), global_time)
-                current_timer % max_time(1) = global_time
-                call iamas_dmpar_min_real(timer_root % dminfo, current_timer % min_time(1), global_time)
-                current_timer % min_time(1) = global_time
-                call iamas_dmpar_sum_real(timer_root % dminfo, current_timer % avg_time(1), global_time)
-                current_timer % avg_time(1) = global_time / timer_root % dminfo % nprocs
-
-                ! Compute percent of run time
-                if ( timer_root % root_timer % total_time(1) /= 0.0_RKIND ) then
-                   percent_inc = current_timer % total_time(1) / timer_root % root_timer % total_time(1)
-                else
-                   percent_inc = 0.0_RKIND
-                end if
-
+                ! Keep the original timer fields consistent for the traversal and parent percentages.
+                current_timer % total_time(1) = global_max_total_accum
+                current_timer % avg_time(1) = global_ave_total / max(1, current_timer % calls)
                 if ( associated(current_timer % parent) ) then
-                   percent_exc = current_timer % total_time(1) / current_timer % parent % total_time(1)
+                   percent_exc = current_timer % total_time(1) / max(1.0e-30_RKIND, &
+                                      real(current_timer % parent % total_time(1), kind=RKIND))
                 else
                    percent_exc = 0.0_RKIND
                 end if
 
-                ! Compute efficiency
-                if ( global_max_total /= 0.0_RKIND ) then
-                   efficiency = global_ave_total / global_max_total
-                else
-                   efficiency = 1.0_RKIND
-                end if
-
-                ! Print current_timer
-                write(msg,'(i2, 1x, a45, f15.5, i10, 3f15.5, 1x, f8.2, 3x, f8.2, 3x, f8.2)') levels, indentation(1:levels-1) // &
-                          current_timer % timer_name, current_timer % total_time(1), current_timer % calls, &
-                          current_timer % min_time(1), current_timer % max_time(1), current_timer % avg_time(1), &
-                          percent_inc * 100.0_RKIND, percent_exc * 100.0_RKIND, efficiency
+                section = trim(current_timer % timer_name)
+                parent_timer => current_timer % parent
+                do while ( associated(parent_timer) )
+                   section = trim(parent_timer % timer_name) // ':' // trim(section)
+                   parent_timer => parent_timer % parent
+                end do
+                write(msg,'(1x, a100, 1x, i16, 1x, 5f14.4, 1x, f9.2)') trim(section), global_calls, &
+                          local_total, global_ave_total, global_min_total, global_max_total_accum, percent_inc * 100.0_RKIND
                 call iamas_log_write(msg)
                 current_timer % printed = .true.
              end if

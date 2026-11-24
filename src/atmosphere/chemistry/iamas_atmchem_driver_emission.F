@@ -23,6 +23,7 @@
 !************************************************************************
 
  module iamas_atmchem_driver_emission
+ use iamas_timer, only: iamas_timer_start, iamas_timer_stop
  use iamas_kind_types
  use iamas_derived_types
  use iamas_pool_routines
@@ -223,6 +224,7 @@
  tend_emis(:,:,:) = 0.
 
  ! Dust and seasalt emission.
+ call iamas_timer_start('emis_natural')
  call mosaic_addemiss_nature(configs = configs                                                                                        , &
         slai = slai(its:ite)                  ,ust = ust(its:ite)                     ,smois = smois(1:num_soils, its:ite)            , &
         ivgtyp = ivgtyp(its:ite)              ,vegfra = vegfra(its:ite)               ,isltyp = isltyp(its:ite)                       , &
@@ -237,12 +239,14 @@
         dust_emiss_active = config_dust_opt   ,seasalt_emiss_active = config_seas_opt ,do_seas_sst_adjust = do_seas_sst_adjust        , &
         soilctop = soilctop(1:16, its:ite)    ,landusef = landusef_temp(1:24,its:ite) ,sh2o = sh2o(1:4, its:ite),xlai = lai(its:ite)  , &
         its = its, ite = ite, kts = kts, kte = kte)
+ call iamas_timer_stop('emis_natural')
 
  call chemistry_debug_message('Nature aerosol emission success')
 
  !Anthropogenic and biomass burning emission. @zhxia
  if (config_emis_update) then
      if (config_use_anthro_emis) then
+ call iamas_timer_start('emis_anthropogenic')
          call mosaic_addemiss_anthropogenic(configs = configs                                                                                    , &
                   tend_emis = tend_emis(1:num_chem, kts:kte, its:ite), dz8w = dz(kts:kte, its:ite), alt = alt(kts:kte, its:ite)                , &
                   e_nh3 = e_nh3(its:ite)          , e_co = e_co(its:ite)          , e_no = e_no(its:ite)            , e_no2 = e_no2(its:ite)     , &
@@ -258,10 +262,12 @@
                   e_prod2 = e_prod2(its:ite)      , e_ch4 = e_ch4(its:ite)        , e_bald = e_bald(its:ite)        , e_hcooh = e_hcooh(its:ite) , &
                   e_cco_oh = e_cco_oh(its:ite)    , e_rco_oh = e_rco_oh(its:ite)  , e_co2 = e_co2(its:ite)                                       , &
                   its = its, ite = ite, kts = kts, kte = kte)
+ call iamas_timer_stop('emis_anthropogenic')
 
          call chemistry_debug_message('Anthropogenic emission success')
      endif
      if (config_use_bioms_emis)  then
+ call iamas_timer_start('emis_biomass')
          call mosaic_addemiss_bioms(configs = configs                                                                                , &
                   tend_emis = tend_emis(1:num_chem, kts:kte, its:ite), dz8w = dz(kts:kte, its:ite), alt = alt(kts:kte, its:ite)      , &
                   ebu_bc   = ebu_bc(its:ite)        , ebu_oc   = ebu_oc(its:ite)       , ebu_pm25 = ebu_pm25(its:ite)                , &
@@ -277,6 +283,7 @@
                   ebu_ole2 = ebu_ole2(its:ite)      , ebu_phen = ebu_phen(its:ite)     , ebu_prod2= ebu_prod2(its:ite)               , &
                   ebu_rcho = ebu_rcho(its:ite)                                                                                       , &
                   its = its, ite = ite, kts = kts, kte = kte)
+ call iamas_timer_stop('emis_biomass')
          call chemistry_debug_message('Biomass burning emission success')
      endif
  endif

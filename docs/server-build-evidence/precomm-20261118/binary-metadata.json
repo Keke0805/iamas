@@ -1,0 +1,19 @@
+{
+  "sha256": "45a8fdebce7ac8d9049d75ebc2c487d9a98cd98b02c7ba61702883a5e86c903a",
+  "compiler": "GCC7.1.0/SWGCC1449",
+  "optimization": "O2; same flags as baseline",
+  "vertical_padding": false,
+  "source": "/home/export/online1/mdt00/shisuan/swlicom1/hk/iamas/precomm-20261118/source-sw64",
+  "build": "/home/export/online1/mdt00/shisuan/swlicom1/hk/iamas/precomm-20261118/build-sw64",
+  "modes": {
+    "0": "original with stage timers",
+    "1": "fusion",
+    "2": "fusion + 4-species reuse",
+    "3": "fusion + reuse + SIMD",
+    "4": "fusion + SIMD"
+  },
+  "source_sha256": {
+    "iamas_atm_time_integration.F": "7610dbd0690e199e6713fdc3046a3ab05bdc17aed44fec3e21c8fdca0111d080",
+    "iamas_atm_time_integration_scalars_mono_precomm.cpp": "c304f4dd1d5fb4c91858d6d242143d46ccc5be1221d73184c83feafa81634a5d"
+  }
+}

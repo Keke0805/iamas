@@ -358,6 +358,7 @@ set(ATMOSPHERE_CORE_CHEMISTRY_SCHEMES_SOURCES
     module_fastj_data.F
     module_data_cbmz.F
     module_vertmx_wrf.F
+    module_vertmx_kokkos.F
     module_linoz.F
 	module_sia_bins_simple.F
 	module_soa_bins_simple.F
@@ -460,7 +461,7 @@ endif()
 # ============================================================================
 enable_language(CXX)
 set(ATMOSPHERE_CORE_CHEMISTRY_SCHEMES_KOKKOS_SOURCES
-    module_optical_averaging_flcl.cpp module_mosaic_settling_flcl.cpp module_ctrans_general_flcl.cpp module_mixactivate_flcl.cpp)
+    module_optical_averaging_flcl.cpp module_mosaic_settling_flcl.cpp module_ctrans_general_flcl.cpp module_mixactivate_flcl.cpp module_vertmx_kokkos.cpp)
 list(TRANSFORM ATMOSPHERE_CORE_CHEMISTRY_SCHEMES_KOKKOS_SOURCES
      PREPEND chemistry/schemes/)
 add_library(flcl_chemistry STATIC

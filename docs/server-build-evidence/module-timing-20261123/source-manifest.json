@@ -1,0 +1,125 @@
+{
+  "src/atmosphere/chemistry/iamas_atmchem_driver_drydep.F": {
+    "origin": "/Users/katie/博士/work/stencil/iamas/vertmx-kokkos-20261122/source/src/atmosphere/chemistry/iamas_atmchem_driver_drydep.F",
+    "original_sha256": "284cfe52a3ba653f681adbd15b77330c63d2810ffd2d488afd79a78731dd7b74",
+    "instrumented_sha256": "ee664899ac072b0fb103091c4b5eb78ac885ee0b3c8d704c44d4bdfb1a471349",
+    "new_timer_names": [
+      "dd_get_fields",
+      "dd_init_arrays",
+      "dd_gas_velocity",
+      "dd_aer_resistance",
+      "dd_aer_velocity",
+      "dd_velocity_prepare",
+      "dd_density_prepare",
+      "dd_mixactivate",
+      "dd_positive_clip",
+      "dd_settling",
+      "dd_budget_update",
+      "dd_scalar_writeback"
+    ],
+    "computational_statements_unchanged": true
+  },
+  "src/atmosphere/chemistry/iamas_atmchem_todynamics.F": {
+    "origin": "/Users/katie/博士/work/stencil/iamas/iamas-v2.6.5/src/atmosphere/chemistry/iamas_atmchem_todynamics.F",
+    "original_sha256": "37332d615f56941476e40f5185b5fdfdb0bf80a6a65c896437add858ad3d919e",
+    "instrumented_sha256": "e4028382bee768e1d3cd785f1ecfb9ce7ca5fc162cf697bb024312a9edf48f8c",
+    "new_timer_names": [
+      "chem_src_get_fields",
+      "chem_src_clear",
+      "chem_src_get_emission",
+      "chem_src_update"
+    ],
+    "computational_statements_unchanged": true
+  },
+  "src/atmosphere/dynamics/iamas_atm_time_integration.F": {
+    "origin": "/Users/katie/博士/work/stencil/iamas/vertmx-kokkos-20261122/kokkos-audit-20261123/server-source/iamas_atm_time_integration.F",
+    "original_sha256": "7610dbd0690e199e6713fdc3046a3ab05bdc17aed44fec3e21c8fdca0111d080",
+    "instrumented_sha256": "3673cbb89f823737e6ab91e803d3e1c3c2c65ac8027fbc007782ef941dbba235",
+    "new_timer_names": [
+      "prep_get_field",
+      "prep_source_update",
+      "prep_source_halo",
+      "prep_density_update"
+    ],
+    "computational_statements_unchanged": true
+  },
+  "src/atmosphere/physics/iamas_atmphys_driver.F": {
+    "origin": "/Users/katie/博士/work/stencil/iamas/iamas-v2.6.5/src/atmosphere/physics/iamas_atmphys_driver.F",
+    "original_sha256": "4ec73cc7c9d9629d5dd71c4a4ab483e1f284ff142ede0a54facb6971b28c26f6",
+    "instrumented_sha256": "7b3e0128933c995f01f9f01453a1d7c57e9f1468f251a5b6cb3534c9f746d2bb",
+    "new_timer_names": [
+      "phys_allocate",
+      "phys_state_prepare",
+      "cloudiness_driver",
+      "radiation_sw_driver",
+      "radiation_lw_driver",
+      "surface_layer_driver",
+      "noah_land_surface",
+      "pbl_driver",
+      "convection_driver",
+      "convection_prep",
+      "convection_writeback",
+      "phys_release"
+    ],
+    "computational_statements_unchanged": true
+  },
+  "src/atmosphere/physics/iamas_atmphys_driver_microphysics.F": {
+    "origin": "/Users/katie/博士/work/stencil/iamas/iamas-v2.6.5/src/atmosphere/physics/iamas_atmphys_driver_microphysics.F",
+    "original_sha256": "f963fbce446dddd68016bb9ba7c04a4c1bbd92dce4feaa4b70ff5ef40ccce513",
+    "instrumented_sha256": "740d1e03625796d33b71019c195207968352ba29d37babecfb242179ff9f8b5e",
+    "new_timer_names": [
+      "mp_allocate",
+      "mp_state_prepare",
+      "mp_radar_diagnostics",
+      "mp_relative_humidity",
+      "mp_precip_writeback",
+      "mp_state_writeback",
+      "mp_release"
+    ],
+    "computational_statements_unchanged": true
+  },
+  "src/atmosphere/chemistry/iamas_atmchem_driver_wetscav.F": {
+    "origin": "/Users/katie/博士/work/stencil/iamas/iamas-v2.6.5/src/atmosphere/chemistry/iamas_atmchem_driver_wetscav.F",
+    "original_sha256": "f099f83240df91e03edbdb6f65bd8889030621776db186da97277e703d9560c4",
+    "instrumented_sha256": "fb4c1a9dc84f8f7f0b83ace31e3cbb7eb699860f7e7155bd1505c93766c4dc99",
+    "new_timer_names": [
+      "wet_state_prepare",
+      "wet_scheme",
+      "wet_budget_update"
+    ],
+    "computational_statements_unchanged": true
+  },
+  "src/atmosphere/chemistry/schemes/module_mosaic_wetscav.F": {
+    "origin": "/Users/katie/博士/work/stencil/iamas/iamas-v2.6.5/src/atmosphere/chemistry/schemes/module_mosaic_wetscav.F",
+    "original_sha256": "97fd2b94946f26c12952113f0e418c77c0a4d0252d5c5326efd37766b216f2e3",
+    "instrumented_sha256": "f087de16773023a3e7226b99b4defc7ecb0e56b858c4c9165443022ab1bcd8e0",
+    "new_timer_names": [
+      "wet_incloud",
+      "wet_precip_profiles",
+      "wet_aerosol_impaction",
+      "wet_gas_rain",
+      "wet_species_update"
+    ],
+    "computational_statements_unchanged": true
+  },
+  "src/atmosphere/chemistry/iamas_atmchem_driver_emission.F": {
+    "origin": "/Users/katie/博士/work/stencil/iamas/iamas-v2.6.5/src/atmosphere/chemistry/iamas_atmchem_driver_emission.F",
+    "original_sha256": "288745a8542fcbb0bf17405bcae925e4f4e87b0a29f2a3b5173eee002308f452",
+    "instrumented_sha256": "7f486f358d6b6fab1c07839c3764b3d3f7b2b7829f0241e0a4330b3649a62d3f",
+    "new_timer_names": [
+      "emis_natural",
+      "emis_anthropogenic",
+      "emis_biomass"
+    ],
+    "computational_statements_unchanged": true
+  },
+  "src/atmosphere/chemistry/schemes/module_optical_averaging.F": {
+    "origin": "/Users/katie/博士/work/stencil/iamas/iamas-v2.6.5/src/atmosphere/chemistry/schemes/module_optical_averaging.F",
+    "original_sha256": "46296176432d425ed438a625e127a6edf6ed3c17bd3894813cd850e3dac58bc6",
+    "instrumented_sha256": "d29fe4d96b0c76d14c775fbbe66a1de78d6b1496a4558e2261835e1ae3bab36b",
+    "new_timer_names": [
+      "opt_prep_bulk"
+    ],
+    "computational_statements_unchanged": true
+  }
+}

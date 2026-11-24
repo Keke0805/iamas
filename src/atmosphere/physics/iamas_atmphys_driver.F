@@ -195,15 +195,19 @@
     call iamas_pool_get_dimension(block % dimensions, 'cellSolveThreadEnd', cellSolveThreadEnd)
 
     !allocate arrays shared by all physics parameterizations:
+ call iamas_timer_start('phys_allocate')
     call allocate_forall_physics(block%configs)
+ call iamas_timer_stop('phys_allocate')
 
     !physics prep step:
     time_lev = 1
 
 !$OMP PARALLEL DO
     do thread=1,nThreads
+ call iamas_timer_start('phys_state_prepare')
        call iAMAS_to_physics(block%configs,mesh,state,time_lev,diag,diag_physics, &
                             cellSolveThreadStart(thread), cellSolveThreadEnd(thread))
+ call iamas_timer_stop('phys_state_prepare')
     end do
 !$OMP END PARALLEL DO
 
@@ -212,8 +216,10 @@
         call allocate_cloudiness(block%configs)
 !$OMP PARALLEL DO
        do thread=1,nThreads
+ call iamas_timer_start('cloudiness_driver')
           call driver_cloudiness(block%configs,mesh,diag,diag_physics,tend_physics,sfc_input, &
                                  cellSolveThreadStart(thread),cellSolveThreadEnd(thread))
+ call iamas_timer_stop('cloudiness_driver')
        end do
 !$OMP END PARALLEL DO
     endif
@@ -224,9 +230,11 @@
        call allocate_radiation_sw(block%configs,xtime_s)
 !$OMP PARALLEL DO
        do thread=1,nThreads
+ call iamas_timer_start('radiation_sw_driver')
           call driver_radiation_sw(itimestep,block%configs,mesh,state,time_lev,diag_physics, &
                                    diag_chemistry,atm_input,sfc_input,tend_physics,xtime_s, &
                                    cellSolveThreadStart(thread), cellSolveThreadEnd(thread))
+ call iamas_timer_stop('radiation_sw_driver')
        end do
 !$OMP END PARALLEL DO
     endif
@@ -237,9 +245,11 @@
        call allocate_radiation_lw(block%configs,xtime_s)
 !$OMP PARALLEL DO
        do thread=1,nThreads
+ call iamas_timer_start('radiation_lw_driver')
           call driver_radiation_lw(xtime_s,block%configs,mesh,state,time_lev,diag_physics, &
                                    diag_chemistry,atm_input,sfc_input,tend_physics, &
                                    cellSolveThreadStart(thread), cellSolveThreadEnd(thread))
+ call iamas_timer_stop('radiation_lw_driver')
        end do
 !$OMP END PARALLEL DO
     endif
@@ -265,8 +275,10 @@
        call allocate_sfclayer(block%configs)
 !$OMP PARALLEL DO
        do thread=1,nThreads
+ call iamas_timer_start('surface_layer_driver')
           call driver_sfclayer(itimestep,block%configs,mesh,diag_physics,sfc_input, &
                                cellSolveThreadStart(thread), cellSolveThreadEnd(thread))
+ call iamas_timer_stop('surface_layer_driver')
        end do
 !$OMP END PARALLEL DO
        call deallocate_sfclayer(block%configs)
@@ -280,8 +292,10 @@
 !        call allocate_lsm(config_frac_seaice)
 !$OMP PARALLEL DO
        do thread=1,nThreads
+ call iamas_timer_start('noah_land_surface')
           call driver_lsm(itimestep,block%configs,mesh,diag_physics,sfc_input, &
                           cellSolveThreadStart(thread), cellSolveThreadEnd(thread))
+ call iamas_timer_stop('noah_land_surface')
        end do
 !$OMP END PARALLEL DO
 !        call deallocate_lsm(config_frac_seaice)
@@ -292,8 +306,10 @@
        call allocate_pbl(block%configs)
 !$OMP PARALLEL DO
        do thread=1,nThreads
+ call iamas_timer_start('pbl_driver')
           call driver_pbl(itimestep,block%configs,mesh,sfc_input,diag_physics,tend_physics, &
                           cellSolveThreadStart(thread),cellSolveThreadEnd(thread))
+ call iamas_timer_stop('pbl_driver')
        end do
 !$OMP END PARALLEL DO
        call deallocate_pbl(block%configs)
@@ -315,16 +331,20 @@
     !call to convection scheme:
 !$OMP PARALLEL DO
     do thread=1,nThreads
+ call iamas_timer_start('convection_prep')
        call update_convection_step1(block%configs,diag_physics,tend_physics, &
                             cellSolveThreadStart(thread),cellSolveThreadEnd(thread))
+ call iamas_timer_stop('convection_prep')
     end do
 !$OMP END PARALLEL DO
     if(l_conv) then
        call allocate_convection(block%configs)
 !$OMP PARALLEL DO
        do thread=1,nThreads
+ call iamas_timer_start('convection_driver')
           call driver_convection(itimestep,block%configs,mesh,sfc_input,diag_physics,tend_physics, &
                                  cellSolveThreadStart(thread), cellSolveThreadEnd(thread))
+ call iamas_timer_stop('convection_driver')
        end do
 !$OMP END PARALLEL DO
        call deallocate_convection(block%configs)
@@ -333,8 +353,10 @@
     if(config_convection_scheme .ne. 'off') then
 !$OMP PARALLEL DO
        do thread=1,nThreads
+ call iamas_timer_start('convection_writeback')
           call update_convection_step2(domain%clock,block%configs,diag_physics, &
                                cellSolveThreadStart(thread),cellSolveThreadEnd(thread))
+ call iamas_timer_stop('convection_writeback')
        end do
 !$OMP END PARALLEL DO
     end if
@@ -348,7 +370,9 @@
 
 
     !deallocate arrays shared by all physics parameterizations:
+ call iamas_timer_start('phys_release')
     call deallocate_forall_physics(block%configs)
+ call iamas_timer_stop('phys_release')
 
     block => block % next
  end do 

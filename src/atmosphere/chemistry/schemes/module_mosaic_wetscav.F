@@ -21,6 +21,7 @@
 !************************************************************************
 
 MODULE module_mosaic_wetscav
+ use iamas_timer, only: iamas_timer_start, iamas_timer_stop
   use iamas_kind_types, only: RKIND,StrKIND
   use iamas_atmchem_utilities
   use iamas_atmchem_configs
@@ -218,6 +219,7 @@ CONTAINS
    !******************************************
    
       !scavenging cloud-phase aerosol assuming precip falls to surface
+ call iamas_timer_start('wet_incloud')
       incloud_select: SELECT CASE(trim(chem_opt))   
    
       !-----------------------------------------
@@ -333,6 +335,7 @@ CONTAINS
          
    
       END SELECT incloud_select
+ call iamas_timer_stop('wet_incloud')
 
 
    call chemistry_debug_message("Starting 2. below-cloud scavenging")
@@ -345,6 +348,7 @@ CONTAINS
 !     3.17e-5 kg/m2/s = 3.17e-8 m/s = 1 m/y = global annual average
 !     1.00e-7 kg/m2/s = 1.00e-10 m/s is a very small precip rate!
 
+ call iamas_timer_start('wet_precip_profiles')
    fapmin_ls = 1.0e-3
    pfsmall_ls = 1.0e-7
 
@@ -460,10 +464,12 @@ CONTAINS
 4900 continue  ! "k = 1, pver"
 
 5900 continue  ! "i = 1, ncol"
+ call iamas_timer_stop('wet_precip_profiles')
 call chemistry_debug_message("Starting 2.2 do below-cloud scavenging")
 !----------------------------------------
 !2.2 do below cloud scavenging
 !----------------------------------------
+ call iamas_timer_start('wet_aerosol_impaction')
       call aerimpactscav (its,ite,kts,kte,num_chem,       &
            ntype_aer, nsize_aer, ncomp_aer, massptr_aer, dens_aer, numptr_aer,  &
            maxd_acomp, maxd_asize,maxd_atype, maxd_aphase, ai_phase,          &
@@ -474,14 +480,18 @@ call chemistry_debug_message("Starting 2.2 do below-cloud scavenging")
            dtstepc, t_phy, p_phy, pdel, chem,          &
            isprx, fapx, pfx, pfx_inrain,           &
            dqdt, dotend      )
+ call iamas_timer_stop('wet_aerosol_impaction')
+ call iamas_timer_start('wet_gas_rain')
       call gasrainscav (its,ite,kts,kte,num_chem,     &
 !                      configs,      &
                       dtstepc,    t_phy,      p_phy,      pdel,  chem,      &
                       isprx,      fapx,       pfx,        pfx_inrain, &
                       dqdt,       dotend      )
+ call iamas_timer_stop('wet_gas_rain')
 !----------------------------------------
 !2.3 update chemistry for below-cloud scavenging 
 !----------------------------------------
+ call iamas_timer_start('wet_species_update')
    do n=1,num_chem
       if(dotend(n))then
          do 6000 i=its,ite
@@ -492,6 +502,7 @@ call chemistry_debug_message("Starting 2.2 do below-cloud scavenging")
       end if
    end do
 !===========================================================================
+ call iamas_timer_stop('wet_species_update')
 !additional option of large scale wet scavenging following GEOS-CHEM
 !     call wetscav_largescale (
 !       ids,ide, jds,jde, kds,kde,                                       &

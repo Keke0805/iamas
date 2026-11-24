@@ -559,7 +559,9 @@
  if (debug_on) call iamas_log_write("--- Doing allocate_microphysics")
 !... allocation of microphysics arrays:
 !$OMP MASTER
+ call iamas_timer_start('mp_allocate')
  call allocate_microphysics(configs)
+ call iamas_timer_stop('mp_allocate')
  if (debug_on) call iamas_log_write("--- End allocate_microphysics")
 !$OMP END MASTER
 !$OMP BARRIER
@@ -570,7 +572,9 @@
 
 !... initialization of soundings for non-hydrostatic dynamical cores.
  if (debug_on) call iamas_log_write("--- Doing microphysics_from_iAMAS")
+ call iamas_timer_start('mp_state_prepare')
  call microphysics_from_iAMAS(configs,mesh,state,time_lev,diag,diag_physics,tend_physics,its,ite)
+ call iamas_timer_stop('mp_state_prepare')
  if (debug_on) call iamas_log_write("--- End microphysics_from_iAMAS")
 
 #ifdef DO_CHEMISTRY
@@ -824,7 +828,9 @@ end do
     if(trim(microp_scheme) == "mp_wsm6"     .or. &
        trim(microp_scheme) == "mp_thompson" .or. &
        trim(microp_scheme) == "mp_morrison") then
+ call iamas_timer_start('mp_radar_diagnostics')
        call compute_radar_reflectivity(configs,diag_physics,its,ite)
+ call iamas_timer_stop('mp_radar_diagnostics')
     else
        call iamas_log_write('*** NOTICE: NOT computing simulated radar reflectivity')
        call iamas_log_write('            since WSM6 or Thompson or Morrison microphysics scheme was not selected')
@@ -832,26 +838,34 @@ end do
 
     !calculate the relative humidity over water if the temperature is strictly greater than 0.C,
     !over ice otherwise.
+ call iamas_timer_start('mp_relative_humidity')
     call compute_relhum(diag,its,ite)
+ call iamas_timer_stop('mp_relative_humidity')
 
  end if
 
 !... copy updated precipitation from the wrf-physics grid back to the geodesic-dynamics grid:
  if (debug_on) call iamas_log_write("--- Doing precip_to_iAMAS")
+ call iamas_timer_start('mp_precip_writeback')
  call precip_to_iAMAS(clock,configs,diag_physics,its,ite)
+ call iamas_timer_stop('mp_precip_writeback')
  if (debug_on) call iamas_log_write("--- End precip_to_iAMAS")
 
 !... copy updated cloud microphysics variables from the wrf-physics grid back to the geodesic-
 !    dynamics grid:
  if (debug_on) call iamas_log_write("--- Doing microphysics_to_iAMAS")
+ call iamas_timer_start('mp_state_writeback')
  call microphysics_to_iAMAS(configs,mesh,state,time_lev,diag,diag_physics,tend,tend_physics,itimestep,its,ite)
+ call iamas_timer_stop('mp_state_writeback')
  if (debug_on) call iamas_log_write("--- End microphysics_to_iAMAS")
 
 !... deallocation of all microphysics arrays:
 !$OMP BARRIER
 !$OMP MASTER
  if (debug_on) call iamas_log_write("--- Doing deallocate_microphysics")
+ call iamas_timer_start('mp_release')
  call deallocate_microphysics(configs)
+ call iamas_timer_stop('mp_release')
  if (debug_on) call iamas_log_write("--- End deallocate_microphysics")
 !$OMP END MASTER
 

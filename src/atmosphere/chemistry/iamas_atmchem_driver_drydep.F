@@ -44,6 +44,7 @@
 !=============================================================================
 
 MODULE iamas_atmchem_driver_drydep
+ use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
  use iamas_kind_types
  use iamas_derived_types
  use iamas_pool_routines
@@ -56,6 +57,7 @@ MODULE iamas_atmchem_driver_drydep
  use module_gocart_drydep
  use module_aer_drydep
  use module_vertmx_wrf
+ use module_vertmx_kokkos, only: vertmx_kokkos_batch, vertmx_kokkos_mode
  use module_mosaic_settling
  use module_mixactivate_wrappers
  use iamas_log
@@ -94,6 +96,10 @@ MODULE iamas_atmchem_driver_drydep
  
 !local variables:
  integer :: i,k,j,h,nv,ll,l
+ integer :: vertmx_mode
+ real(kind=RKIND), allocatable :: vertmx_candidate(:,:,:)
+ real(kind=RKIND) :: vertmx_error, vertmx_scale
+ character(len=256) :: vertmx_message
  integer :: itf,ktf,jtf
  integer :: k_a, k_c, kmax, m_mam
  integer :: idrydep_onoff,aer_mech_id
@@ -153,6 +159,7 @@ MODULE iamas_atmchem_driver_drydep
 !-----------------------------------------------------------------------------------------------------------------
 
 !jwfeng: Whether to calculate budget (tendencies)
+ call iamas_timer_start('dd_get_fields')
  call iamas_pool_get_config(configs,'config_gas_drydep_opt' ,gas_drydep_option )
  call iamas_pool_get_config(configs,'config_do_chem_budget' ,config_do_chem_budget )
  call iamas_pool_get_config(configs,'config_chem_opt'       ,chem_opt      )
@@ -182,6 +189,8 @@ MODULE iamas_atmchem_driver_drydep
  call iamas_pool_get_array(tend_chemistry,'v_grav_3d'      ,v_grav_3d     )
  call iamas_pool_get_array(tend          ,'tend_qndrop_activation'      ,tend_qndrop_activation     )
  call iamas_pool_get_array(sfc_input     , 'mminlu'        ,mminlu) !ensure that mminlu contains the name of the land use dataset. zhxia@2026
+ call iamas_timer_stop('dd_get_fields')
+ call iamas_timer_start('dd_init_arrays')
  if (config_do_chem_budget) then
       chem_old(1:num_chem,kts:kte,its:ite) = chem(1:num_chem,kts:kte,its:ite)
  end if
@@ -196,6 +205,7 @@ MODULE iamas_atmchem_driver_drydep
  jtf=min0(jte,jde-1)
  ktf=min0(kte,kde-1)
  itf=min0(ite,ide-1)
+ call iamas_timer_stop('dd_init_arrays')
 !-----------------------------------------------------------------------------------------------------------------
  
 !
@@ -220,6 +230,7 @@ MODULE iamas_atmchem_driver_drydep
 !
 !      CALL wrf_debug(15,'DOING DRY DEP VELOCITIES WITH WESELY METHOD')
          
+ call iamas_timer_start('dd_gas_velocity')
          call wesely_driver(id=itimestep,ktau=itimestep,dtstep=dt_dyn,                                                                          &
               config_flags=config_flags,gmt=gmt,                                                                                                &
               julday=int(curr_julday),t_phy=t_phy(kts:kte,its:ite),moist=moist(1:num_moist,kts:kte,its:ite),                                    &
@@ -232,6 +243,7 @@ MODULE iamas_atmchem_driver_drydep
               snowh=snowh(its:ite),numgas=num_gas,                                                                                              &
               its=its,ite=ite,kts=kts,kte=kte,                                                                                                  &
               latCell=latCell(its:ite),lonCell=lonCell(its:ite)                  )
+ call iamas_timer_stop('dd_gas_velocity')
               call chemistry_debug_message('wesely_driver success')
        
      CASE DEFAULT 
@@ -338,6 +350,7 @@ MODULE iamas_atmchem_driver_drydep
 !      else
 !         ! this is the default -- use aerodynamic resistance from 
 !         ! "default reference height" (currently 2 m) to surface
+ call iamas_timer_start('dd_aer_resistance')
        aer_res(its:ite) = aer_res_def(its:ite)
        write(debugString, *) "--- Min/Max of aer_res = ", maxval(aer_res(its:ite)),"/",minval(aer_res(its:ite))
        call chemistry_debug_message(debugString)
@@ -345,6 +358,7 @@ MODULE iamas_atmchem_driver_drydep
 
        idrydep_onoff = 1
        aer_mech_id = 3
+ call iamas_timer_stop('dd_aer_resistance')
 
 ! !  config_flags%aer_drydep_opt <= 0   -- aerosol depositon velocities are set to zero
 ! !  config_flags%aer_drydep_opt >= 100 -- aerosol depvels are calculated in subr aer_depvel_driver
@@ -364,6 +378,7 @@ MODULE iamas_atmchem_driver_drydep
 ! !    END SELECT adrydep_select
        else ! (config_flags%aer_drydep_opt > 99)
           call chemistry_debug_message('DOING DRY DEP VELOCITIES THRU AER_DRYDEP_DRIVER')
+ call iamas_timer_start('dd_aer_velocity')
           call aer_drydep_driver(                                                                                                                           &
                   id=itimestep, ktau=itimestep, dtstep=dt_dyn,                                                                                              &
                   config_flags=config_flags, aer_mech_id=aer_mech_id,                                                                                       & 
@@ -375,8 +390,10 @@ MODULE iamas_atmchem_driver_drydep
                   moist=moist(1:num_moist,kts:kte,its:ite),chem=chem(1:num_chem,kts:kte,its:ite), ddvel=ddvel(1:num_chem,its:ite),                          &
                   h2oai=h2oai(kts:kte,its:ite),h2oaj=h2oaj(kts:kte,its:ite), numgas=num_gas,                                                                &
                   its=its,ite=ite,kts=kts,kte=kte)
+ call iamas_timer_stop('dd_aer_velocity')
 
       end if
+ call iamas_timer_start('dd_velocity_prepare')
       if (config_flags%aer_drydep_opt > 0) then
          if ((aer_mech_id > 0) .and. (aer_mech_id <= 4)) then
              ! limit aerosol ddvels to <= 0.5 m/s
@@ -415,12 +432,28 @@ MODULE iamas_atmchem_driver_drydep
       enddo
       enddo
       enddo
+ call iamas_timer_stop('dd_velocity_prepare')
 
 ! !   This will be called later from subgrd_transport_driver.F !!!!!!!!
 ! !
 ! !
 ! !     dep_vel_o3=0.
 ! !      if (num_vert_mix == 1) then
+     call iamas_timer_start('vertmx')
+     vertmx_mode = vertmx_kokkos_mode()
+     if (vertmx_mode == 1) then
+        call vertmx_kokkos_batch(dt_dyn, epsilc, index(trim(chem_opt), "aq") /= 0, &
+             chem(1:num_chem,kts:kte,its:ite), alt(kts:kte,its:ite), &
+             zgrid(kts:kte+1,its:ite), kzh(kts:kte,its:ite), &
+             ddvel(1:num_chem,its:ite), is_aerosol(1:num_chem))
+     else
+        if (vertmx_mode == 2) then
+           allocate(vertmx_candidate(num_chem,kte-kts+1,ite-its+1))
+           vertmx_candidate = chem(1:num_chem,kts:kte,its:ite)
+           call vertmx_kokkos_batch(dt_dyn, epsilc, index(trim(chem_opt), "aq") /= 0, &
+                vertmx_candidate, alt(kts:kte,its:ite), zgrid(kts:kte+1,its:ite), &
+                kzh(kts:kte,its:ite), ddvel(1:num_chem,its:ite), is_aerosol(1:num_chem))
+        endif
      do i=its,ite
           pblst=0.
 !
@@ -468,15 +501,37 @@ MODULE iamas_atmchem_driver_drydep
          enddo
       enddo
      enddo !i loop
+        if (vertmx_mode == 2) then
+           call iamas_timer_start('vertmx_validate')
+           if (.not. all(ieee_is_finite(vertmx_candidate)) .or. &
+               .not. all(ieee_is_finite(chem(1:num_chem,kts:kte,its:ite)))) then
+              error stop 'vertmx validation: nonfinite concentration'
+           endif
+           vertmx_error = maxval(abs(vertmx_candidate-chem(1:num_chem,kts:kte,its:ite)))
+           vertmx_scale = maxval(abs(vertmx_candidate-chem(1:num_chem,kts:kte,its:ite)) / &
+                max(abs(chem(1:num_chem,kts:kte,its:ite)),epsilc))
+           write(vertmx_message,'(a,i0,a,i0,a,es12.4,a,es12.4)') &
+                'VERTMX_VALIDATE step=',itimestep,' values=',size(vertmx_candidate), &
+                ' max_abs=',vertmx_error,' max_rel=',vertmx_scale
+           call iamas_log_write(trim(vertmx_message), masterOnly=.false.)
+           if (vertmx_scale > 2.e-13_RKIND) error stop 'vertmx validation: numerical mismatch'
+           chem(1:num_chem,kts:kte,its:ite) = vertmx_candidate
+           deallocate(vertmx_candidate)
+           call iamas_timer_stop('vertmx_validate')
+        endif
+     endif
+     call iamas_timer_stop('vertmx')
 ! !      endif ! num_vert_mix = 0
 ! !
 ! !  vertical mixing and activation of aerosol
 ! !
+ call iamas_timer_start('dd_density_prepare')
      where( alt(kts:kte,its:ite) /= 0. )  !get dry density to conserve mass in mixactivate, wig, 24-apr-2006
         dryrho_phy(kts:kte,its:ite) = 1./alt(kts:kte,its:ite)
      elsewhere
         dryrho_phy(kts:kte,its:ite) = 0.
      end where
+ call iamas_timer_stop('dd_density_prepare')
      
  
      ! zhxia add this for determining which scheme is used for vertical scheme calculation. 
@@ -484,6 +539,7 @@ MODULE iamas_atmchem_driver_drydep
         !----------------------------------------
         !Vertical turbulent mixing with dry deposition and aerosol activation for aerosols only. zhxia@2026
         !----------------------------------------
+ call iamas_timer_start('dd_mixactivate')
         call mosaic_mixactivate (                                                                                                                                     &
              id=itimestep, ktau=itimestep, dtstep=dt_dyn, config_flags=config_flags,                                                                                  &
              idrydep_onoff=idrydep_onoff, p_phy=pres_hyd(kts:kte,its:ite),rho_phy=dryrho_phy(kts:kte,its:ite),                                                        &
@@ -499,27 +555,36 @@ MODULE iamas_atmchem_driver_drydep
              nacon1=nacon1(kts:kte,its:ite),nacon2=nacon2(kts:kte,its:ite),nacon3=nacon3(kts:kte,its:ite),nacon4=nacon4(kts:kte,its:ite),                             &
              tke_pbl=tke_pbl(kts:kte,its:ite),relhum3d=relhum(kts:kte,its:ite),wsub3d=wsub3d(kts:kte,its:ite),                                                        &                              
              its=its,ite=ite,  kts=kts,kte=kte)
+ call iamas_timer_stop('dd_mixactivate')
    
      endif  
 
+ call iamas_timer_start('dd_positive_clip')
      chem(1:num_chem,kts:kte,its:ite) =max(epsilc,chem(1:num_chem,kts:kte,its:ite))   
+ call iamas_timer_stop('dd_positive_clip')
      call chemistry_debug_message('call mosaic settling routine')
+ call iamas_timer_start('dd_settling')
      call mosaic_settling_driver(dt=dt_dyn,config_flags=config_flags,t_phy=t_phy(kts:kte,its:ite),moist=moist(1:num_moist,kts:kte,its:ite),&
           chem=chem(1:num_chem,kts:kte,its:ite),rho_phy=rho_phy(kts:kte,its:ite),dz8w=dz(kts:kte,its:ite)                                  &
           ,p8w=pres2_hyd(kts:kte+1,its:ite),p_phy=pres_hyd(kts:kte,its:ite),dx=dx(its:ite),g=g,                                            &
           v_grav_3d=v_grav_3d(1:num_chem,kts:kte,its:ite),its=its,ite=ite, kts=kts,kte=kte) ! jwfeng add v_grav_3d
+ call iamas_timer_stop('dd_settling')
 
 
      call chemistry_debug_message('drydep driver success')
 
+ call iamas_timer_start('dd_budget_update')
      if (config_do_chem_budget) then
        call iamas_pool_get_array(tend_chemistry,'tend_mixdry',tend_mixdry)
        tend_mixdry(1:num_chem,kts:kte,its:ite) = (chem(1:num_chem,kts:kte,its:ite) - chem_old(1:num_chem,kts:kte,its:ite)) / dt_dyn
      end if
+ call iamas_timer_stop('dd_budget_update')
  
+ call iamas_timer_start('dd_scalar_writeback')
      scalars(p_qndrop,kts:kte,its:ite) = qndrop3d(kts:kte,its:ite)
      scalars(p_qniceaer,kts:kte,its:ite) = qnice3d(kts:kte,its:ite)
      scalars(p_qnicemix,kts:kte,its:ite) = nimey3d(kts:kte,its:ite)
+ call iamas_timer_stop('dd_scalar_writeback')
      call chemistry_debug_message('drydep to iAMAS success')
 
  end subroutine driver_drydep

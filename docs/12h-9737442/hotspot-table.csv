@@ -1,0 +1,138 @@
+section,calls_all_ranks,local_s,avg_s,min_s,max_s,total_pct,parent_max_pct,max_over_avg,classification,source
+total time,360,10565.2491,10565.2478,10565.2386,10565.3035,100.0,,1.000005272001287,existing_timer,
+total time:initialize,360,80.289,80.2586,80.2432,80.3186,0.7602110057699716,0.7602110057699716,1.0007475834365414,existing_timer,
+total time:initialize:Stream input in init,360,54.7252,54.779,54.7252,54.8181,0.5188502157084272,68.25081612478306,1.0007137771773855,existing_timer,
+total time:initialize:Stream input in init:iAMAS_readStream,360,51.4673,51.4626,51.4525,51.4709,0.487169157043146,93.89398756979902,1.0001612821738506,existing_timer,
+total time:initialize:Stream input in init:Exch all halos in read stream,360,0.1221,0.1274,0.1194,0.1377,0.0013033227109850653,0.2511944047677683,1.0808477237048664,existing_timer,
+total time:initialize:Stream input in init:Postread in read stream,360,0.0213,0.021,0.0201,0.022,0.0002082287555676938,0.040132729883013085,1.0476190476190474,existing_timer,
+total time:initialize:Blocks init,360,20.7561,20.6923,20.6828,20.7561,0.19645531242902772,25.84220840502698,1.0030832725216627,existing_timer,
+total time:iAMAS_writeStream,720,146.7723,146.6329,146.6303,146.7723,1.3891915173094649,1.3891915173094649,1.0009506734164024,existing_timer,
+total time:iAMAS_readStream,720,0.1914,0.1805,0.1616,0.1964,0.0018589148906134122,0.0018589148906134122,1.0880886426592797,existing_timer,
+total time:Exch all halos in read stream,720,0.0012,0.0009,0.0006,0.0015,1.419741515234276e-05,1.419741515234276e-05,1.6666666666666667,existing_timer,
+total time:Postread in read stream,720,0.0001,0.0,0.0,0.0001,9.464943434895174e-07,9.464943434895174e-07,,existing_timer,
+total time:time integration,172800,8308.8383,8310.1826,8299.1165,8311.3049,78.66603074866708,78.66603074866708,1.0001350511840736,existing_timer,
+total time:time integration:physics driver,172800,669.6215,542.4725,401.4181,687.339,6.505624755597414,8.269928829106005,1.267048560065257,existing_timer,
+total time:time integration:physics driver:phys_allocate,172800,0.0307,0.0306,0.0291,0.044,0.0004164575111353876,0.006401499114701769,1.4379084967320261,host_management,src/atmosphere/physics/iamas_atmphys_driver.F
+total time:time integration:physics driver:phys_state_prepare,172800,10.6438,10.4246,9.797,11.4475,0.1083499399709625,1.6654809344442842,1.098123669013679,fortran_candidate,src/atmosphere/physics/iamas_atmphys_driver.F
+total time:time integration:physics driver:cloudiness_driver,8640,80.906,79.1356,74.4743,84.1148,0.7961418240375205,12.237745857575373,1.0629198489681004,fortran_mixed,src/atmosphere/physics/iamas_atmphys_driver.F
+total time:time integration:physics driver:cloudiness_driver:calc_cldfraction,8640,80.7207,78.954,74.2957,83.9242,0.7943378058188295,99.77340491804057,1.062950578818046,existing_timer,
+total time:time integration:physics driver:radiation_sw_driver,8640,242.0463,132.4144,3.5931,253.6458,2.400743149498734,36.90257645790505,1.9155454391667373,existing_kokkos_mixed,src/atmosphere/physics/iamas_atmphys_driver.F
+total time:time integration:physics driver:radiation_sw_driver:RRTMG_sw,8640,238.4293,128.825,0.0913,250.1166,2.3673394711283025,98.60861090544373,1.9415222200659812,existing_timer,
+total time:time integration:physics driver:radiation_lw_driver,8640,113.0357,113.1734,106.8852,124.8752,1.181936704421222,18.167920051095603,1.103397088008313,existing_kokkos_mixed,src/atmosphere/physics/iamas_atmphys_driver.F
+total time:time integration:physics driver:radiation_lw_driver:RRTMG_lw,8640,111.3888,111.5611,105.303,123.2206,1.1662760090138442,98.67499711712173,1.1045122358958455,existing_timer,
+total time:time integration:physics driver:radiation_lw_driver:RRTMG_lw:array_t,8640,0.0511,0.0508,0.0504,0.0526,0.0004978560246754861,0.04268766748417066,1.035433070866142,existing_timer,
+total time:time integration:physics driver:surface_layer_driver,172800,6.8054,6.4151,5.4135,7.3764,0.06981720875316076,1.0731822288565032,1.149849573662141,fortran_mixed,src/atmosphere/physics/iamas_atmphys_driver.F
+total time:time integration:physics driver:surface_layer_driver:MYNN_sfclay,172800,4.8119,4.4769,3.6873,5.0923,0.04819833145351669,69.03503063825171,1.1374611896624898,existing_timer,
+total time:time integration:physics driver:noah_land_surface,172800,1.1175,2.4203,1.0544,5.6324,0.05331034740270358,0.8194500821283238,2.3271495269181504,fortran_candidate,src/atmosphere/physics/iamas_atmphys_driver.F
+total time:time integration:physics driver:pbl_driver,172800,78.1975,76.8256,72.4702,88.3572,0.83629590006572,12.854966763125619,1.1501010079973344,fortran_mixed,src/atmosphere/physics/iamas_atmphys_driver.F
+total time:time integration:physics driver:pbl_driver:MYNN_pbl,172800,50.9016,49.812,46.9333,61.4733,0.5818413072563415,69.57361709062758,1.234106239460371,existing_timer,
+total time:time integration:physics driver:convection_prep,172800,0.0031,0.0033,0.0031,0.0035,3.312730202213311e-05,0.0005092101568512772,1.0606060606060606,fortran_candidate,src/atmosphere/physics/iamas_atmphys_driver.F
+total time:time integration:physics driver:convection_driver,172800,135.1655,120.0121,103.4186,143.4797,1.358027244555729,20.874663011992624,1.195543616018718,fortran_mixed,src/atmosphere/physics/iamas_atmphys_driver.F
+total time:time integration:physics driver:convection_driver:Grell-Freitas,172800,126.7262,111.7754,95.4391,135.5745,1.2832049737141957,94.49037041476947,1.212918942808525,existing_timer,
+total time:time integration:physics driver:convection_writeback,172800,0.0502,0.055,0.0496,0.062,0.0005868264929635008,0.009020294207079766,1.1272727272727272,fortran_candidate,src/atmosphere/physics/iamas_atmphys_driver.F
+total time:time integration:physics driver:phys_release,172800,0.0248,0.0253,0.0242,0.0347,0.00032843353719086253,0.005048454983639805,1.3715415019762847,host_management,src/atmosphere/physics/iamas_atmphys_driver.F
+total time:time integration:chemistry driver,172800,1765.707,1728.9612,1627.8732,1843.4727,17.44836482927348,22.180304081973944,1.0662313879571155,existing_timer,
+total time:time integration:chemistry driver:chemistry_from_iAMAS,172800,8.7564,8.6606,8.2908,9.074,0.0858848967282388,0.4922231829090824,1.0477334133893725,existing_timer,
+total time:time integration:chemistry driver:optical driver,9000,771.1916,759.1823,723.5293,794.371,7.518676581321114,43.091009701418415,1.046350790844307,existing_timer,
+total time:time integration:chemistry driver:optical driver:optical_prep_sectional,9000,52.5627,44.5353,28.7832,58.143,0.5503202061351101,7.319375959092163,1.3055486322086076,existing_timer,
+total time:time integration:chemistry driver:optical driver:optical_prep_sectional:opt_prep_bulk,9000,36.8856,29.1503,13.969,42.5609,0.4028365110382299,73.20038525703868,1.4600501538577646,fortran_candidate,src/atmosphere/chemistry/schemes/module_optical_averaging.F
+total time:time integration:chemistry driver:optical driver:mieaer,9000,694.7165,691.1643,659.0785,716.6056,6.782631469129116,90.21044323118544,1.0368093375193133,existing_timer,
+total time:time integration:chemistry driver:photolysis driver,9000,0.0186,0.0009,0.0008,0.0186,0.00017604794788905021,0.0010089653077043127,20.666666666666664,existing_timer,
+total time:time integration:chemistry driver:emission driver,172800,28.4805,22.484,14.2088,28.4805,0.26956632149753196,1.5449374433372405,1.266700764988436,existing_timer,
+total time:time integration:chemistry driver:emission driver:emis_natural,172800,13.5046,7.6993,0.0414,13.5046,0.12782027511088537,47.417004617194216,1.7540036107178574,fortran_candidate,src/atmosphere/chemistry/iamas_atmchem_driver_emission.F
+total time:time integration:chemistry driver:dry deposition,172800,681.5995,673.6475,632.1329,774.2851,7.328564673982154,42.00144108453573,1.1493920782011364,existing_timer,
+total time:time integration:chemistry driver:dry deposition:dd_get_fields,172800,0.0388,0.0382,0.0378,0.039,0.00036913279396091176,0.005036904365071728,1.0209424083769634,host_management,src/atmosphere/chemistry/iamas_atmchem_driver_drydep.F
+total time:time integration:chemistry driver:dry deposition:dd_init_arrays,172800,11.7362,11.5261,11.0967,11.9335,0.11294990248032157,1.5412281600149609,1.0353458672057332,fortran_candidate,src/atmosphere/chemistry/iamas_atmchem_driver_drydep.F
+total time:time integration:chemistry driver:dry deposition:dd_gas_velocity,172800,0.6527,0.6005,0.4719,1.4329,0.013562317447861296,0.18506103242849437,2.386178184845962,fortran_candidate,src/atmosphere/chemistry/iamas_atmchem_driver_drydep.F
+total time:time integration:chemistry driver:dry deposition:dd_aer_resistance,172800,0.0277,0.0265,0.0183,0.0296,0.00028016232567289716,0.003822881261695466,1.1169811320754717,mixed_management,src/atmosphere/chemistry/iamas_atmchem_driver_drydep.F
+total time:time integration:chemistry driver:dry deposition:dd_aer_velocity,172800,9.4139,9.2251,8.7499,9.5803,0.09067699758932622,1.2373090997101712,1.038503647656936,fortran_candidate,src/atmosphere/chemistry/iamas_atmchem_driver_drydep.F
+total time:time integration:chemistry driver:dry deposition:dd_velocity_prepare,172800,0.5921,0.5629,0.5232,0.6079,0.005753739114072776,0.07851113239813086,1.079943151536685,fortran_candidate,src/atmosphere/chemistry/iamas_atmchem_driver_drydep.F
+total time:time integration:chemistry driver:dry deposition:vertmx,172800,21.8586,21.5618,20.8192,22.2632,0.21071992867975822,2.875323314370895,1.0325297516904897,existing_timer,
+total time:time integration:chemistry driver:dry deposition:vertmx:vertmx_workspace,172800,0.1824,0.1808,0.1771,0.1847,0.0017481750524251387,0.8296201803873656,1.021570796460177,existing_timer,
+total time:time integration:chemistry driver:dry deposition:vertmx:vertmx_geometry,172800,1.6632,1.6231,1.408,1.7952,0.016991466454323815,8.063530849114233,1.1060316677961923,existing_timer,
+total time:time integration:chemistry driver:dry deposition:vertmx:vertmx_solve_writeback,172800,19.9768,19.7223,19.129,20.3522,0.19263242177567355,91.41632829063207,1.0319384655947836,existing_timer,
+total time:time integration:chemistry driver:dry deposition:dd_density_prepare,172800,0.3965,0.3971,0.3783,0.4207,0.003981901703060399,0.054333991445786566,1.059430873835306,fortran_candidate,src/atmosphere/chemistry/iamas_atmchem_driver_drydep.F
+total time:time integration:chemistry driver:dry deposition:dd_mixactivate,172800,419.3434,413.6388,378.5076,513.155,4.856983048333633,66.27468357585596,1.240587198299579,existing_kokkos_mixed,src/atmosphere/chemistry/iamas_atmchem_driver_drydep.F
+total time:time integration:chemistry driver:dry deposition:dd_positive_clip,172800,13.4959,13.2805,12.8099,13.6926,0.12959968447664566,1.768418377158491,1.0310304581905803,fortran_candidate,src/atmosphere/chemistry/iamas_atmchem_driver_drydep.F
+total time:time integration:chemistry driver:dry deposition:dd_settling,172800,201.659,200.7443,193.181,207.7632,1.966466935852813,26.832906896955656,1.0349643800596082,existing_kokkos_mixed,src/atmosphere/chemistry/iamas_atmchem_driver_drydep.F
+total time:time integration:chemistry driver:dry deposition:dd_budget_update,172800,0.0008,0.0008,0.0007,0.0009,8.518449091405655e-06,0.00011623625457857834,1.125,fortran_candidate,src/atmosphere/chemistry/iamas_atmchem_driver_drydep.F
+total time:time integration:chemistry driver:dry deposition:dd_scalar_writeback,172800,1.1763,1.1581,1.1199,1.195,0.011310607404699732,0.1543359158015568,1.0318625334599776,fortran_candidate,src/atmosphere/chemistry/iamas_atmchem_driver_drydep.F
+total time:time integration:chemistry driver:chem convection,172800,208.0469,200.7737,183.8405,267.5422,2.5322717894474116,14.512946136929502,1.3325560070865854,existing_timer,
+total time:time integration:chemistry driver:chem convection:assignment,172800,23.0168,22.6098,21.7567,23.3751,0.2212439992850182,8.736976820852934,1.0338481543401534,existing_timer,
+total time:time integration:chemistry driver:chem convection:calculate1,172800,25.9157,26.0683,24.6832,27.7295,0.26245814897792574,10.364533146546602,1.063724907262844,existing_timer,
+total time:time integration:chemistry driver:chem convection:cup_ct,172800,78.5603,75.3907,68.5251,100.9936,0.9558987112864292,37.74866170645229,1.3396028953173271,existing_timer,
+total time:time integration:chemistry driver:chem convection:calculate2,172800,10.6695,10.6826,6.8796,11.6698,0.11045399689653969,4.36185394304151,1.0924119596352948,existing_timer,
+total time:time integration:chemistry driver:chem convection:calculate3,172800,21.312,18.7556,12.0575,63.1647,0.5978503125821233,23.609247438348046,3.367778156923799,existing_timer,
+total time:time integration:chemistry driver:Kinetics thermodynamics driver,4680,0.0018,0.0017,0.0017,0.0019,1.798339252630083e-05,0.00010306634863646204,1.1176470588235294,existing_timer,
+total time:time integration:chemistry driver:wet scavenging,172800,64.4692,63.9879,26.3783,83.6126,0.7913885294445162,4.535602832632129,1.3066939218195939,existing_timer,
+total time:time integration:chemistry driver:wet scavenging:wet_state_prepare,172800,0.4199,0.4126,0.3987,0.4276,0.004047209812761176,0.511406175624248,1.0363548230731943,fortran_mixed,src/atmosphere/chemistry/iamas_atmchem_driver_wetscav.F
+total time:time integration:chemistry driver:wet scavenging:wet_scheme,172800,63.269,63.1444,25.5507,82.7595,0.7833139862002072,98.97969923193395,1.3106387898214253,fortran_candidate,src/atmosphere/chemistry/iamas_atmchem_driver_wetscav.F
+total time:time integration:chemistry driver:wet scavenging:wet_scheme:wet_incloud,172800,0.003,0.0031,0.003,0.0034,3.218080767864359e-05,0.004108289682755454,1.096774193548387,fortran_candidate,src/atmosphere/chemistry/schemes/module_mosaic_wetscav.F
+total time:time integration:chemistry driver:wet scavenging:wet_scheme:wet_precip_profiles,172800,1.6382,1.7238,1.39,2.07,0.019592432910233007,2.5012234245011147,1.2008353637312912,fortran_candidate,src/atmosphere/chemistry/schemes/module_mosaic_wetscav.F
+total time:time integration:chemistry driver:wet scavenging:wet_scheme:wet_aerosol_impaction,172800,2.8174,5.3569,0.3768,18.8928,0.17881928332678756,22.82855744657713,3.5268158823199984,fortran_candidate,src/atmosphere/chemistry/schemes/module_mosaic_wetscav.F
+total time:time integration:chemistry driver:wet scavenging:wet_scheme:wet_gas_rain,172800,0.4445,0.6935,0.1357,2.6359,0.024948644400040187,3.185011992580912,3.8008651766402304,fortran_candidate,src/atmosphere/chemistry/schemes/module_mosaic_wetscav.F
+total time:time integration:chemistry driver:wet scavenging:wet_scheme:wet_species_update,172800,34.2773,31.7051,0.1343,43.4344,0.4111041391286109,52.48267570490396,1.369949944961536,fortran_candidate,src/atmosphere/chemistry/schemes/module_mosaic_wetscav.F
+total time:time integration:chemistry driver:wet scavenging:wet_budget_update,172800,0.0006,0.0006,0.0006,0.0007,6.625460404426622e-06,0.0008371943941463368,1.1666666666666667,fortran_mixed,src/atmosphere/chemistry/iamas_atmchem_driver_wetscav.F
+total time:time integration:atm_rk_integration_setup,172800,43.7347,43.4738,41.7627,51.98,0.4919877597458511,0.6254132248234571,1.195662674990454,existing_timer,
+total time:time integration:atm_compute_moist_coefficients,172800,10.3367,10.2725,9.8232,10.7698,0.10193554780513404,0.1295801336803322,1.0484108055487953,existing_timer,
+total time:time integration:physics_get_tend,172800,26.009,47.1181,26.009,107.4112,1.0166409322742125,1.2923506151242268,2.2796165380182987,existing_timer,
+total time:time integration:chemistry_addtend,172800,77.3069,78.7385,73.045,143.4799,1.358029137544416,1.7263221807685099,1.8222330880065023,existing_timer,
+total time:time integration:chemistry_addtend:chem_src_get_fields,172800,0.0064,0.0063,0.0061,0.0067,6.341512101379766e-05,0.004669643622556192,1.0634920634920635,host_management,src/atmosphere/chemistry/iamas_atmchem_todynamics.F
+total time:time integration:chemistry_addtend:chem_src_clear,172800,14.8281,14.6507,13.9586,15.2637,0.14447005710720948,10.638214830091185,1.0418410041841004,fortran_candidate,src/atmosphere/chemistry/iamas_atmchem_todynamics.F
+total time:time integration:chemistry_addtend:chem_src_get_emission,172800,0.0037,0.0035,0.0034,0.0038,3.596678505260166e-05,0.002648454591897541,1.0857142857142856,host_management,src/atmosphere/chemistry/iamas_atmchem_todynamics.F
+total time:time integration:chemistry_addtend:chem_src_update,172800,62.4542,64.0635,59.0198,128.7701,1.218801712605795,89.74783227476463,2.010038477448157,fortran_candidate,src/atmosphere/chemistry/iamas_atmchem_todynamics.F
+total time:time integration:atm_compute_vert_imp_coefs,518400,11.5304,11.1073,10.0325,12.1349,0.11485614208810944,0.14600475071008406,1.0925157328963835,existing_timer,
+total time:time integration:atm_compute_dyn_tend,1555200,487.6189,490.5312,467.2922,515.5767,4.879904301849918,6.203318326103041,1.0510579143589642,existing_timer,
+total time:time integration:small_step_prep,1555200,32.0634,31.4666,30.3895,32.7263,0.3097525783334099,0.39375646055290314,1.0400329237985675,existing_timer,
+total time:time integration:atm_advance_acoustic_step,2073600,154.7348,152.0015,139.8955,160.4536,1.518684247925296,1.9305464295985582,1.0556053723154049,existing_timer,
+total time:time integration:atm_divergence_damping_3d,2073600,30.5461,31.9374,27.8656,34.3297,0.3249286686369208,0.4130482567183885,1.074905909685823,existing_timer,
+total time:time integration:atm_recover_large_step_variables,1555200,180.6276,177.9234,160.3507,190.9633,1.8074568326409177,2.297633191149082,1.0732894043166892,existing_timer,
+total time:time integration:atm_compute_solve_diagnostics,1555200,276.4245,275.6123,253.1258,293.6054,2.7789585031797714,3.5326029249630824,1.0652840965370558,existing_timer,
+total time:time integration:atm_rk_dynamics_substep_finish,518400,23.0981,23.0389,22.0595,24.5624,0.2324817266252692,0.29553000756836634,1.0661272890632798,existing_timer,
+total time:time integration:atm_advance_for_scalars,345600,309.4769,315.416,293.1155,353.1606,3.3426451024336403,4.249159479157118,1.119666091764527,existing_timer,
+total time:time integration:atm_advance_for_scalars:advance_scalars_yakl,345600,309.3954,315.3349,293.034,353.0798,3.3418803350041006,99.97712089060897,1.1196978196831369,existing_timer,
+total time:time integration:atm_advance_for_chem,345600,1578.5602,1568.2859,1498.6283,1627.9864,15.408799188778627,19.58761493637419,1.0380673574888353,existing_timer,
+total time:time integration:atm_advance_for_chem:advance_scalars_yakl,345600,1578.4748,1568.2019,1498.544,1627.9022,15.40800224054141,99.99482796662184,1.0380692690144042,existing_timer,
+total time:time integration:atm_advance_mono_for_scalars,172800,311.2287,332.534,274.7146,467.8636,4.428302509246422,5.629243610109889,1.4069647013538467,existing_timer,
+total time:time integration:atm_advance_mono_for_scalars:mono_work_prep,172800,30.8929,19.2278,10.767,62.4081,0.5906891363792814,13.338951779963217,3.2457223395292236,existing_timer,
+total time:time integration:atm_advance_mono_for_scalars:mono_work_prep:prep_get_field,172800,0.0021,0.0021,0.002,0.0023,2.17693699002589e-05,0.0036854190401566463,1.0952380952380953,host_management,src/atmosphere/dynamics/iamas_atm_time_integration.F
+total time:time integration:atm_advance_mono_for_scalars:mono_work_prep:prep_source_update,172800,4.5616,4.6763,4.374,5.4925,0.05198620181616173,8.800940903504513,1.1745397001903213,fortran_candidate,src/atmosphere/dynamics/iamas_atm_time_integration.F
+total time:time integration:atm_advance_mono_for_scalars:mono_work_prep:prep_source_halo,172800,24.3432,12.6002,4.1468,55.9487,0.5295512807559196,89.64974097913573,4.4403025348803995,mpi_communication,src/atmosphere/dynamics/iamas_atm_time_integration.F
+total time:time integration:atm_advance_mono_for_scalars:mono_work_prep:prep_density_update,172800,1.9752,1.9381,1.8384,2.0351,0.019262106384355167,3.2609549080968656,1.0500490170785821,fortran_mixed,src/atmosphere/dynamics/iamas_atm_time_integration.F
+total time:time integration:atm_advance_mono_for_scalars:mono_precomm,172800,165.3163,179.4066,157.9679,269.9993,2.5555281019612925,57.7089775738057,1.5049574541850745,existing_timer,
+total time:time integration:atm_advance_mono_for_scalars:mono_precomm:pc_init,172800,18.3121,19.1491,17.2556,20.253,0.19169349938693195,7.501130558486634,1.0576476179037135,existing_timer,
+total time:time integration:atm_advance_mono_for_scalars:mono_precomm:pc_ghost,172800,0.0114,0.0131,0.011,0.0142,0.00013440219677551149,0.005259272894411208,1.083969465648855,existing_timer,
+total time:time integration:atm_advance_mono_for_scalars:mono_precomm:pc_vert_flux,172800,7.1403,7.8182,6.5578,17.5295,0.16591572594199494,6.492424239618398,2.2421401345578262,existing_timer,
+total time:time integration:atm_advance_mono_for_scalars:mono_precomm:pc_horiz_flux,172800,41.9871,46.7588,39.7468,76.7722,0.7266445303724592,28.434221866501137,1.6418770370497104,existing_timer,
+total time:time integration:atm_advance_mono_for_scalars:mono_precomm:pc_vert_upwind,172800,23.229,24.0677,21.1049,37.7083,0.35690692652605766,13.96607324537508,1.5667595989645875,existing_timer,
+total time:time integration:atm_advance_mono_for_scalars:mono_precomm:pc_horiz_lbc,172800,0.0741,0.074,0.0709,0.078,0.0007382655879218235,0.028888963786202405,1.0540540540540542,existing_timer,
+total time:time integration:atm_advance_mono_for_scalars:mono_precomm:pc_div_limiter,172800,74.5156,81.4805,67.9927,125.627,1.1890524488955758,46.52863914832371,1.5418044808267006,existing_timer,
+total time:time integration:atm_advance_mono_for_scalars:mono_halo,172800,19.7887,25.9974,3.7934,97.3863,0.9217558208337319,20.815105086183237,3.7460015232292463,existing_timer,
+total time:time integration:atm_advance_mono_for_scalars:mono_afcomm,172800,95.1631,107.8343,88.495,185.5178,1.7559154831661958,39.65211228229766,1.7203969423458028,existing_timer,
+total time:time integration:atm_advance_mono_for_chem,172800,1425.5024,1441.2909,1373.1151,1541.5949,14.59110852802288,18.548169253181896,1.0695931681799975,existing_timer,
+total time:time integration:atm_advance_mono_for_chem:mono_work_prep,172800,53.1502,71.335,42.2367,156.4489,1.4807799889515716,10.148509183573454,2.19315763650382,existing_timer,
+total time:time integration:atm_advance_mono_for_chem:mono_work_prep:prep_get_field,172800,0.0018,0.0018,0.0016,0.0023,2.17693699002589e-05,0.0014701285851162903,1.277777777777778,host_management,src/atmosphere/dynamics/iamas_atm_time_integration.F
+total time:time integration:atm_advance_mono_for_chem:mono_work_prep:prep_source_update,172800,22.9553,22.5366,21.6111,23.594,0.22331587540291675,15.08096253792772,1.0469192336022293,fortran_candidate,src/atmosphere/dynamics/iamas_atm_time_integration.F
+total time:time integration:atm_advance_mono_for_chem:mono_work_prep:prep_source_halo,172800,28.2104,46.8474,17.7166,132.0835,1.2501628561829765,84.42596911835109,2.819441420441689,mpi_communication,src/atmosphere/dynamics/iamas_atm_time_integration.F
+total time:time integration:atm_advance_mono_for_chem:mono_work_prep:prep_density_update,172800,1.9716,1.938,1.8389,2.0367,0.019277250293851002,1.301830821437543,1.0509287925696595,fortran_mixed,src/atmosphere/dynamics/iamas_atm_time_integration.F
+total time:time integration:atm_advance_mono_for_chem:mono_precomm,172800,860.8347,852.3544,804.3723,883.1815,8.359262940245872,57.29011558094802,1.0361669981406796,existing_timer,
+total time:time integration:atm_advance_mono_for_chem:mono_precomm:pc_init,172800,99.1812,98.371,93.8539,102.8972,0.9739161776090957,11.65074223135335,1.046011527787661,existing_timer,
+total time:time integration:atm_advance_mono_for_chem:mono_precomm:pc_ghost,172800,0.0472,0.0465,0.0443,0.0528,0.0004997490133624652,0.005978386096176154,1.135483870967742,existing_timer,
+total time:time integration:atm_advance_mono_for_chem:mono_precomm:pc_vert_flux,172800,36.827,35.5374,33.2867,38.1988,0.3615494812808737,4.325135886564652,1.0748901157653628,existing_timer,
+total time:time integration:atm_advance_mono_for_chem:mono_precomm:pc_horiz_flux,172800,213.5377,214.3626,201.1559,228.2531,2.1604026803394714,25.844415898657296,1.0647990834222014,existing_timer,
+total time:time integration:atm_advance_mono_for_chem:mono_precomm:pc_vert_upwind,172800,123.1147,121.7348,109.6397,126.8981,1.2010833384956712,14.368292361196424,1.0424143301668873,existing_timer,
+total time:time integration:atm_advance_mono_for_chem:mono_precomm:pc_horiz_lbc,172800,0.3266,0.3254,0.3121,0.3414,0.003231331688673212,0.038655701008229904,1.0491702519975414,existing_timer,
+total time:time integration:atm_advance_mono_for_chem:mono_precomm:pc_div_limiter,172800,387.7565,381.9318,343.5594,396.189,3.749906474527684,44.85929562609724,1.0373291776175746,existing_timer,
+total time:time integration:atm_advance_mono_for_chem:mono_halo,172800,41.444,54.4619,18.6684,136.2345,1.2894518363812266,8.837243818074384,2.501464326437381,existing_timer,
+total time:time integration:atm_advance_mono_for_chem:mono_afcomm,172800,469.9309,462.9984,439.1441,478.548,4.5294297508822154,31.04239641685374,1.0335845653030333,existing_timer,
+total time:time integration:microphysics,172800,170.0152,166.8732,101.859,224.535,2.125211074154188,2.701561339664004,1.345542603605612,existing_timer,
+total time:time integration:microphysics:mp_allocate,172800,2.543,2.4985,2.4078,2.5823,0.02444132343192981,1.150065691317612,1.0335401240744446,host_management,src/atmosphere/physics/iamas_atmphys_driver_microphysics.F
+total time:time integration:microphysics:mp_state_prepare,172800,17.5926,17.173,16.4688,18.3648,0.17382179319316288,8.179036675796645,1.0693996389681477,fortran_candidate,src/atmosphere/physics/iamas_atmphys_driver_microphysics.F
+total time:time integration:microphysics:Thompson,172800,96.1935,94.367,31.5364,149.7345,1.4172285727523113,66.68648540316654,1.5867252323375756,existing_timer,
+total time:time integration:microphysics:mp_precip_writeback,172800,5.2713,4.9501,3.5908,6.3876,0.06045827268473641,2.8448126127329814,1.2903981737742671,fortran_candidate,src/atmosphere/physics/iamas_atmphys_driver_microphysics.F
+total time:time integration:microphysics:mp_state_writeback,172800,24.8002,24.3347,23.1667,27.7301,0.26246382794398665,12.350012247533792,1.1395291497326863,fortran_candidate,src/atmosphere/physics/iamas_atmphys_driver_microphysics.F
+total time:time integration:microphysics:mp_release,172800,0.0366,0.0395,0.0359,0.064,0.0006057563798332912,0.028503351370610372,1.620253164556962,host_management,src/atmosphere/physics/iamas_atmphys_driver_microphysics.F
+total time:time integration:microphysics:mp_radar_diagnostics,4320,0.4732,0.6664,0.4273,3.4745,0.03288594596454328,1.5474202240185273,5.213835534213685,fortran_candidate,src/atmosphere/physics/iamas_atmphys_driver_microphysics.F
+total time:time integration:microphysics:mp_relative_humidity,4320,0.1245,0.1312,0.1171,0.1499,0.0014187950208907865,0.06676019328835149,1.142530487804878,fortran_candidate,src/atmosphere/physics/iamas_atmphys_driver_microphysics.F
+total time:write output files,172800,1887.2148,1887.8655,1886.0738,1890.1668,17.89032184451682,17.89032184451682,1.0012189957388382,existing_timer,
+total time:write output files:iAMAS_writeStream,8640,1860.5984,1858.7465,1858.7133,1860.5984,17.610458611056465,98.43567244964837,1.0009963166036897,existing_timer,

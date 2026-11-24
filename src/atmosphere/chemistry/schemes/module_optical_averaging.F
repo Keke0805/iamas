@@ -773,6 +773,7 @@ call chemistry_debug_message(msg)
 !
       itype=1
       iphase=1
+ call iamas_timer_start('opt_prep_bulk')
       do k = kts, kte
       do i = its, ite
         do isize = 1, nbin_o
@@ -1202,6 +1203,7 @@ call chemistry_debug_message(msg)
         enddo ! isize 
       enddo ! i
       enddo ! k
+ call iamas_timer_stop('opt_prep_bulk')
 
       return
 

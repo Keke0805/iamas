@@ -568,6 +568,53 @@ module atm_time_integration
     end interface
 
    contains
+
+   subroutine iamas_precomm_stage(stage, start_flag) bind(C, name="iamas_precomm_stage")
+      use, intrinsic :: iso_c_binding, only: c_int
+      integer(c_int), value :: stage, start_flag
+      character(len=32) :: label
+      block
+         logical, save :: reported = .false.
+         character(len=32) :: mode_text
+         integer :: status
+         if (.not. reported)then
+            mode_text = '0'
+            call get_environment_variable('IAMAS_PRECOMM_MODE', mode_text, status=status)
+            if(status == 1)mode_text = '0'
+            call iamas_log_write('PRECOMM experiment: mode='//trim(mode_text)//' vertical_padding=none')
+            reported = .true.
+         endif
+      end block
+      select case(stage)
+      case(0)
+         label = 'pc_init'
+      case(1)
+         label = 'pc_ghost'
+      case(2)
+         label = 'pc_vert_flux'
+      case(3)
+         label = 'pc_horiz_flux'
+      case(4)
+         label = 'pc_vert_upwind'
+      case(5)
+         label = 'pc_horiz_lbc'
+      case(6)
+         label = 'pc_horiz_div'
+      case(7)
+         label = 'pc_limiter'
+      case(8)
+         label = 'pc_div_limiter'
+      case default
+         error stop 'Invalid precomm stage'
+      end select
+      if(start_flag /= 0)then
+         call iamas_timer_start(trim(label))
+      else
+         call iamas_timer_stop(trim(label))
+      endif
+   end subroutine iamas_precomm_stage
+
+
 ! xinqu added
    subroutine atm_advance_acoustic_step_kokkos_f(maxEdges,nVertLevels,nCells, nEdges, nCellsSolve, cellStart, cellEnd, vertexStart, vertexEnd, edgeStart, edgeEnd, &
       cellSolveStart, cellSolveEnd, vertexSolveStart, vertexSolveEnd, edgeSolveStart, edgeSolveEnd, &
@@ -4819,10 +4866,13 @@ subroutine atm_advance_scalars_mono(block, tend, state, diag, mesh, configs, pac
          flux_array_scalars(:,nEdges+1,:) = 0.0_RKIND
          allocate(wdtn_array_scalars(nVertLevels+1,nCells+1,num_scalars_dummy))
          wdtn_array_scalars(:,nCells+1,:) = 0.0_RKIND
+         call iamas_timer_start('mono_work_prep')
          call atm_advance_scalars_mono_work_prep(state,package_name,num_scalars_dummy,nCells,nEdges,nVertLevels_dummy,advance_density,										               &
                                           scalar_tend,scalars_old,scalars_new,dt,rho_zz_old,rho_zz_int,rho_zz_new,cellStart,cellEnd,cellSolveStart,cellSolveEnd,nEdgesOnCell,	   &
                                           edgesOnCell,edgesOnCell_sign,uhAvg,dvEdge,invAreaCell,wwAvg,rdnw)
+         call iamas_timer_stop('mono_work_prep')
          ! print *,"start precomm",trim(package_name)
+         call iamas_timer_start('mono_precomm')
          call advance_scalars_mono_precomm_kokkos_f(maxEdges,nCells, nEdges, nVertLevels_dummy, dt, 			                        &
             cellStart, cellEnd, vertexStart, vertexEnd, edgeStart, edgeEnd, 								                                 &
             cellSolveStart, cellSolveEnd, vertexSolveStart, vertexSolveEnd, edgeSolveStart, edgeSolveEnd, 	                        &
@@ -4834,13 +4884,17 @@ subroutine atm_advance_scalars_mono(block, tend, state, diag, mesh, configs, pac
             scale_array_scalars, scalar_new_arr_scalars, scalar_old_arr_scalars, flux_array_scalars,wdtn_array_scalars,             & 
             bdyMaskCell, bdyMaskEdge, 																		                                          &
             advance_density, config_apply_lbcs,rho_zz_int)
+         call iamas_timer_stop('mono_precomm')
          ! print *,"end precomm",trim(package_name)
          ! print *,"start comm",trim(package_name)
          if(config_adv_mono_comm) then
+            call iamas_timer_start('mono_halo')
             call atm_advance_scalars_mono_work_comm(block,num_scalars_dummy,nCells,nVertLevels_dummy,scale_array_scalars)
+            call iamas_timer_stop('mono_halo')
          endif
          ! print *,"end comm",trim(package_name)
          ! print *,"start afcomm",trim(package_name)
+         call iamas_timer_start('mono_afcomm')
          call advance_scalars_mono_afcomm_kokkos_f(maxEdges, nCells, nEdges, nVertLevels_dummy, dt, 			                        &
             cellStart, cellEnd, vertexStart, vertexEnd, edgeStart, edgeEnd, 								                                 &
             cellSolveStart, cellSolveEnd, vertexSolveStart, vertexSolveEnd, edgeSolveStart, edgeSolveEnd, 	                        &
@@ -4852,6 +4906,7 @@ subroutine atm_advance_scalars_mono(block, tend, state, diag, mesh, configs, pac
             scale_array_scalars, scalar_new_arr_scalars, scalar_old_arr_scalars, flux_array_scalars,wdtn_array_scalars,             &        
             bdyMaskCell, bdyMaskEdge, 																		                                          &
             advance_density, config_apply_lbcs, config_adv_mono_comm,rho_zz_int)
+         call iamas_timer_stop('mono_afcomm')
          ! print *,"end afcomm",trim(package_name)
          ! call atm_advance_scalars_mono_work(block, state, package_name, nCells, nEdges, nVertLevels, dt, 	&
          ! 	cellStart, cellEnd, vertexStart, vertexEnd, edgeStart, edgeEnd, 								         &
@@ -4941,13 +4996,16 @@ subroutine atm_advance_scalars_mono(block, tend, state, diag, mesh, configs, pac
          local_advance_density = .true.
       end if
 
+ call iamas_timer_start('prep_get_field')
       call iamas_pool_get_field(state, trim(package_name), scalars_old_field, 1)
+ call iamas_timer_stop('prep_get_field')
 
       !  for positive-definite or monotonic option, we first update scalars using the tendency from sources other than
       !  the resolved transport (these should constitute a positive definite update).  
       !  Note, however, that we enforce positive-definiteness in this update.
       !  The transport will maintain this positive definite solution and optionally, shape preservation (monotonicity).
 
+ call iamas_timer_start('prep_source_update')
       do iCell=cellSolveStart,cellSolveEnd
 !DIR$ IVDEP
       do k = 1,nVertLevels_dummy
@@ -4964,19 +5022,23 @@ subroutine atm_advance_scalars_mono(block, tend, state, diag, mesh, configs, pac
       end do
       end do
       end do
+ call iamas_timer_stop('prep_source_update')
 
 
+ call iamas_timer_start('prep_source_halo')
 !$OMP BARRIER
 !$OMP MASTER
       call iamas_dmpar_exch_halo_field(scalars_old_field)
 !$OMP END MASTER
 !$OMP BARRIER
+ call iamas_timer_stop('prep_source_halo')
 
 
       !
       ! Runge Kutta integration, so we compute fluxes from scalar_new values, update starts from scalar_old
       !
 
+ call iamas_timer_start('prep_density_update')
       if (local_advance_density) then
          if (.not.present(rho_zz_int)) then
             call iamas_log_write('Error: rho_zz_int not supplied to atm_advance_scalars_mono_work( ) when advance_density=.true.', messageType=iAMAS_LOG_CRIT)
@@ -5006,6 +5068,7 @@ subroutine atm_advance_scalars_mono(block, tend, state, diag, mesh, configs, pac
          end do
 !$OMP BARRIER
       end if
+ call iamas_timer_stop('prep_density_update')
 
 
    end subroutine atm_advance_scalars_mono_work_prep
