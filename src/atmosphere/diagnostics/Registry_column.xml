@@ -1,0 +1,21 @@
+<!-- ****************************************** -->
+<!-- Column Concentration diagnostics           -->
+<!-- Calculation of cloud column concentration, -->
+<!-- as detailed in column_diagnostics.F        -->
+<!-- ****************************************** -->
+
+<var_struct name="diag" time_levs="1">
+
+        <var name="qc_column" type="real" dimensions="nCells Time" units="g m^{-2}"
+             description="Cloud water mixing ratio column concentration"/>
+
+        <var name="qi_column" type="real" dimensions="nCells Time" units="g m^{-2}"
+             description="Ice mixing ratio column concentration"/>
+
+        <var name="qs_column" type="real" dimensions="nCells Time" units="g m^{-2}"
+             description="Snow mixing ratio column concentration"/>
+        
+        <var name="qg_column" type="real" dimensions="nCells Time" units="g m^{-2}"
+             description="Graupel mixing ratio column concentration"/>
+
+</var_struct>

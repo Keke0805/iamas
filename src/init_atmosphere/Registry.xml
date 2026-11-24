@@ -1,0 +1,2268 @@
+<?xml version="1.0"?>
+<registry model="iamas" core="init_atmosphere" core_abbrev="init_atm" version="7.0">
+
+<!-- **************************************************************************************** -->
+<!-- ************************************** Dimensions ************************************** -->
+<!-- **************************************************************************************** -->
+
+        <dims>
+                <dim name="nCells"
+                     description="The number of Voronoi cells in the primal mesh"/>
+                <dim name="nEdges"
+                     description="The number of cell faces (edges) in the primal and dual meshes"/>
+                <dim name="maxEdges"
+                     description="The largest number of neighbors that a primal mesh cell may have"/>
+                <dim name="maxEdgesP1" definition="maxEdges+1"
+                     description="maxEdges+1"/>
+                <dim name="maxEdges2"
+                     description="Twice the value of maxEdges"/>
+                <dim name="nVertices"
+                     description="The number of Delaunay triangles in the dual mesh, equivalent to the number of cell corners in the primal mesh"/>
+                <dim name="TWO" definition="2"
+                     description="A constant value of 2"/>
+                <dim name="THREE" definition="3"
+                     description="A constant value of 3"/>
+                <dim name="vertexDegree"
+                     description="The number of edges or cells that meet at vertices"/>
+                <dim name="FIFTEEN" definition="15"
+                     description="A constant value of 15"/>
+                <dim name="TWENTYONE" definition="21"
+                     description="A constant value of 21"/>
+                <dim name="R3" definition="3"
+                     description="The dimensionality of vectors in $\Re^3$"/>
+                <dim name="nVertLevels" definition="namelist:config_nvertlevels"
+                     description="The number of atmospheric layers"/>
+                <dim name="nSoilLevels" definition="namelist:config_nsoillevels"
+                     description="The number of soil layers used by the land-surface scheme"/>
+                <dim name="nFGLevels" definition="namelist:config_nfglevels"
+                     description="The number of first-guess atmospheric layers"/>
+                <dim name="nFGSoilLevels" definition="namelist:config_nfgsoillevels"
+                     description="The number of first-guess soil layers"/>
+                <dim name="nVertLevelsP1" definition="nVertLevels+1"
+                     description="The number of atmospheric levels, always one more than the number of layers"/>
+                <dim name="nMonths" definition="namelist:config_months"
+                     description="The number of months in a year"/>
+                <dim name="nSoilTypes" definition="16"
+                     description="The number of soil types"/>
+                <dim name="nLanduseTypes" definition="61"
+                     description="The number of Landuse types"/>
+               <!-- qkyang added to support building turbulence model((: -->
+                <dim name="nUpstreamSect" definition="8"
+                     description="The number of upstream sections"/>
+               <!-- qkyang added to support building turbulence model)): -->
+               <!-- qkyang added to support slope and shading effects((: -->
+                <dim name="nShadowDirBins" definition="36"
+                     description="The number of azimuth bins for terrain horizon angle"/>
+               <!-- qkyang added to support slope and shading effects)): -->
+                <!-- Add this for supporting using external chemical field from wrfchem as initial values in iamas. zhxia@lacar. 06/2025-->
+                <dim name="nFGGasLevels" definition="namelist:config_nfggaslevels"
+                     description="The number of first-guess gas layers"/>
+
+        </dims>
+
+
+<!-- **************************************************************************************** -->
+<!-- ************************************** Namelists *************************************** -->
+<!-- **************************************************************************************** -->
+
+        <nml_record name="nhyd_model" in_defaults="true">
+
+                <!-- zhxia add case = 10 for emission update. 0415/2025 -->
+                <nml_option name="config_init_case"             type="integer"       default_value="7"
+                     units="-"
+                     description="Type of initial conditions to create: \newline
+                                        1 = Jablonowski &amp; Williamson barolinic wave (no initial perturbation), \newline
+                                        2 = Jablonowski &amp; Williamson barolinic wave (with initial perturbation), \newline
+                                        3 = Jablonowski &amp; Williamson barolinic wave (with normal-mode perturbation), \newline
+                                        4 = squall line, \newline
+                                        5 = super-cell, \newline
+                                        6 = mountain wave, \newline
+                                        7 = real-data initial conditions from, e.g., GFS, \newline
+                                        8 = surface field (SST, sea-ice) update file for use with real-data simulations, \newline
+                                        9 = lateral boundary conditions update file for use with real-data simulations, \newline
+                                        10 = emission field (e.g., nh3, so4), \newline
+                                        11 = Fdda field for nudging" 
+                     possible_values="1 -- 11"/>
+
+                <nml_option name="config_calendar_type" type="character" default_value="gregorian" in_defaults="false"
+                     units="-"
+                     description="Simulation calendar type"
+                     possible_values="`gregorian',`gregorian_noleap'"/>
+
+                <nml_option name="config_start_time"            type="character"     default_value="2010-10-23_00:00:00"
+                     units="-"
+                     description="Time to begin processing first-guess data (cases 7, 8, and 9 only)"
+                     possible_values="`YYYY-MM-DD_hh:mm:ss'"/>
+
+                <nml_option name="config_stop_time"             type="character"     default_value="2010-10-23_00:00:00"
+                     units="-"
+                     description="Time to end processing first-guess data (cases 8 and 9 only)"
+                     possible_values="`YYYY-MM-DD_hh:mm:ss'"/>
+
+                <nml_option name="config_theta_adv_order" type="integer" default_value="3"
+                     units="-"
+                     description="Horizontal advection order for theta"
+                     possible_values="2, 3, or 4"/>
+
+                <nml_option name="config_coef_3rd_order" type="real" default_value="0.25"
+                     units="-"
+                     description="Upwinding coefficient in the 3rd order advection scheme"
+                     possible_values="0 $\leq$ config_coef_3rd_order $\leq$ 1"/>
+
+                <nml_option name="config_num_halos" type="integer" default_value="2" in_defaults="false"
+                     units="-"
+                     description="Number of halo layers for fields"
+                     possible_values="Integer values, typically 2 or 3; DO NOT CHANGE"/>
+
+        </nml_record>
+
+        <nml_record name="dimensions" in_defaults="true">
+
+                <nml_option name="config_nvertlevels"           type="integer"       default_value="55"
+                     units="-"
+                     description="The number of vertical levels to be used in the model"
+                     possible_values="Positive integer values"/>
+
+                <nml_option name="config_nsoillevels"           type="integer"       default_value="4"
+                     units="-"
+                     description="The number of vertical soil levels needed by LSM in the model (case 7 only)"
+                     possible_values="Positive integer values"/>
+
+                <nml_option name="config_nfglevels"             type="integer"       default_value="38"
+                     units="-"
+                     description="The number of atmospheric levels (including surface and sea-level) in the first-guess dataset (cases 7 and 9 only)"
+                     possible_values="Positive integer values"/>
+
+                <nml_option name="config_nfgsoillevels"         type="integer"       default_value="4"
+                     units="-"
+                     description="The number of vertical soil levels in the first-guess dataset (case 7 only)"
+                     possible_values="Positive integer values"/>
+
+                <nml_option name="config_months"                type="integer"       default_value="12"      in_defaults="false"
+                     units="-"
+                     description="The number of months in a year"
+                     possible_values="Positive integer values"/>
+
+                <!-- Add this for supporting using external chemical field from wrfchem as initial values in iamas. zhxia@lacar. 06/2025-->
+                <nml_option name="config_nfggaslevels"             type="integer"       default_value="49"
+                     units="-"
+                     description="The number of gas levels in the first-guess dataset (cases 7 only)"
+                     possible_values="Positive integer values"/>
+
+
+        </nml_record>
+
+        <nml_record name="les" in_defaults="true">
+
+                <nml_option name="config_les_scheme" type="character" default_value="off"
+                     units="-"
+                     description="Subgrid turbulence closure used by the atmosphere integration"
+                     possible_values="`off' or `les_deardorff'"/>
+
+                <nml_option name="config_les_tke_min" type="real" default_value="1.0e-6"
+                     units="m^2 s^{-2}"
+                     description="Minimum SGS turbulent kinetic energy written to initial and LBC files"
+                     possible_values="Non-negative real values"/>
+
+                <nml_option name="config_les_lbc_tke_mode" type="character" default_value="diagnose"
+                     units="-"
+                     description="Treatment of SGS TKE when generating limited-area lateral boundaries"
+                     possible_values="`diagnose', `input', or `minimum'"/>
+
+        </nml_record>
+
+        <nml_record name="data_sources" in_defaults="true">
+
+                <nml_option name="config_geog_data_path"        type="character"     default_value="/glade/work/wrfhelp/WPS_GEOG/"
+                     units="-"
+                     description="Path to the WPS static data files (case 7 only)"
+                     possible_values="Any valid path"/>
+
+                <nml_option name="config_met_prefix"            type="character"     default_value="CFSR"
+                     units="-"
+                     description="Filename prefix of ungrib intermediate file to use for initial conditions (cases 7 and 9 only)"
+                     possible_values="Any alpha-numeric string"/>
+
+               <nml_option name="config_fdda_prefix"            type="character"     default_value="inputdata/metdata/ERA5"
+                     units="-"
+                     description="Filename prefix of ungrib intermediate file to use for initial conditions (cases 11 only)"
+                     possible_values="Any alpha-numeric string"/>
+
+                <nml_option name="config_source_opt"            type="character"     default_value="ssm"
+                     units="-"
+                     description="Dust source-function option"
+                     possible_values="erod, ssm"/>
+
+                <nml_option name="config_source_file"             type="character"     default_value="inputdata/emissions/emissions_source_ssm_500m.dat"
+                     units="-"
+                     description="Filename prefix of dust source intermediate file to use for initial conditions (case 7 only)"
+                     possible_values="Any alpha-numeric string"/>
+
+                <!-- qkyang added to support anthropogenic heating emissions((: -->
+                <nml_option name="config_AH_emis_file"             type="character"     default_value="inputdata/emissions/emissions_anthropogenic_heating_yangxc_2010.dat"
+                     units="-"
+                     description="Filename prefix of AH_emis intermediate file to use for initial conditions"
+                     possible_values="Any alpha-numeric string"/>
+                <nml_option name="is_ah_emis"          type="logical"       default_value="false"
+                     units="-"
+                     description="Whether to use anthropogenic heating emission."
+                     possible_values="true or false"/>
+                <!-- qkyang added to support anthropogenic heating emissions)): -->
+
+                <!-- zhxia add this for emission update. 0415/2025-->
+                <nml_option name="config_anthro_emis_prefix"      type="character"     default_value="inputdata/emissions/emissions_anthropogenic_HTAPv2_0.1x0.1_hourly_"
+                     units="-"
+                     description="Filename prefix of anthropogenic emission intermediate file to use for updating emission (cases 10 only)"
+                     possible_values="Any alpha-numeric string"/>
+
+                <nml_option name="config_use_anthro_emis"          type="logical"       default_value="false"
+                     units="-"
+                     description="Whether to open reading anthropogenic emission. If this option is False, emission_update will not read anthropogenic emission."
+                     possible_values="true or false"/>
+
+                <nml_option name="config_bioms_emis_prefix"            type="character"     default_value="inputdata/emissions/FINN/FIRE:"
+                     units="-"
+                     description="Filename prefix of biomass burning emission intermediate file to use for updating emission (cases 10 only)"
+                     possible_values="Any alpha-numeric string"/>
+
+                <nml_option name="config_use_bioms_emis"          type="logical"       default_value="false"
+                     units="-"
+                     description="Whether to open reading biomass burning emission. If this option is False, emission_update will not read biomass burning emission."
+                     possible_values="true or false"/>
+
+                <nml_option name="config_emis_interp_type"            type="character"     default_value="coarse2fine"
+                     units="-"
+                     description="Determine which method used for interploating emission intermediate file into iAMAS grids. (1) fine2coarse: applicable to interpolating the original fine-resolution data to the coarse-resolution grid of IAMAS, using the regional average method; (2) variable: applicable to interpolating the original fine-resolution data to the variational grid of IAMAS - both fine and coarse; (3) coarse2fine: applicable to the original  coarse-resolution data to the fine-resolution grid of IAMAS."
+                     possible_values="fine2coarse, variable, coarse2fine"/>
+
+                <!-- zhxia add this for emission update. 0415/2025-->
+
+                <!-- Add this for supporting using external chemical field from wrfchem as initial values in iamas. zhxia@lacar. 06/2025-->
+                <nml_option name="config_fix_gasinit_file"            type="character"     default_value="inputdata/chemdata/saprc99/iAMAS_Global_gasinit_saprc99.dat"
+                     units="-"
+                     description="Filename of gas initical data from wrfchem. (cases 7 only)"
+                     possible_values="Any valid path"/>
+
+                <nml_option name="config_use_fix_gasinit"          type="logical"       default_value="false"
+                     units="-"
+                     description="Whether to open reading gas initical data from wrfchem."
+                     possible_values="true or false"/>
+                <!-- Add this for supporting using external chemical field from wrfchem as initial values in iamas. zhxia@lacar. 06/2025-->
+
+                 <!-- Add this for supporting using external ozone field from TOST as initial values in iamas. zhxia@lacar. 10/2025-->
+               <nml_option name="config_fix_ozone_init_file"            type="character"     default_value="inputdata/chemdata/ozone_TOST/iAMAS_Global_ozone_init_2010s03_TOSA.dat"
+                     units="-"
+                     description="Filename of ozone initical data from TOST. (cases 7 only)"
+                     possible_values="Any valid path"/>
+
+                <nml_option name="config_use_fix_ozone_init"          type="logical"       default_value="false"
+                     units="-"
+                     description="Whether to open reading ozone initical data from TOST."
+                     possible_values="true or false"/>
+                <!-- Add this for supporting using external ozone field from TOST as initial values in iamas. zhxia@lacar. 10/2025-->
+
+               <nml_option name="config_sfc_prefix"            type="character"     default_value="SST"
+                     units="-"
+                     description="Filename prefix of ungrib intermediate file to use for SST and sea-ice (cases 7 and 8 only)"
+                     possible_values="Any alpha-numeric string"/>
+
+                <nml_option name="config_fg_interval"           type="integer"       default_value="86400"
+                     units="-"
+                     description="Interval between intermediate files (cases 8 and 9 only)"
+                     possible_values="[DDD_]hh:mm:ss"/>
+
+               <!-- qkyang added to speed init_static ((((((((: -->
+                <nml_option name="config_soilcat_data"          type="character"     default_value="HWSD"
+                     units="-"
+                     description="The soil category classification to use"
+                     possible_values="`STATSGO', `BNU', or `HWSD'"/> 
+               <nml_option name="config_auto_supersam"          type="logical"       default_value="true"
+                     units="-"
+                     description="Whether to use automatic supersampling for MODIS land use, or for 30s terrain, soil category, and MODIS FPAR monthly vegetation fraction (case 7 only)"
+                     possible_values="true or false"/>
+               <!-- qkyang added to speed init_static ))))))))): -->
+
+                <nml_option name="config_landuse_data"          type="character"     default_value="MODIFIED_IGBP_MODIS_NOAH"
+                     units="-"
+                     description="The land use classification to use (case 7 only)"
+                     possible_values="`USGS' or `MODIFIED_IGBP_MODIS_NOAH'"/>
+
+               <!-- qkyang added to support LCZ landuse dataset((((((((: -->
+               <nml_option name="config_use_lcz"          type="logical"       default_value="false"
+                     units="-"
+                     description="Whether to use 61-class LCZ 100 m land cover dataset."
+                     possible_values="true or false"/>
+               <!-- qkyang added to support LCZ landuse dataset))))))))): -->
+
+               <!-- qkyang added to support building turbulence model((((((((: -->
+               <nml_option name="config_build_turb_n"          type="logical"       default_value="false"
+                     units="-"
+                     description="Whether to use building turbulence model."
+                     possible_values="true or false"/>
+               <nml_option name="config_build_turb_d"          type="logical"       default_value="false"
+                     units="-"
+                     description="Whether to use building turbulence model."
+                     possible_values="true or false"/>
+               <!-- qkyang added to support building turbulence model))))))))): -->
+
+                <nml_option name="config_topo_data"             type="character"     default_value="GMTED2010"
+                     units="-"
+                     description="The topography dataset to use for the model terrain and for GWDO static fields (case 7 only)"
+                     possible_values="`GTOPO30' or `GMTED2010'"/>
+
+                <!-- qkyang added to support slope and shading effects((((((((:-->
+                <nml_option name="config_slope_rad"             type="integer"       default_value="0"
+                     units="-"
+                     description="1: enable slope-dependent shortwave correction static precompute; 0: disable"
+                     possible_values="0,1"/>
+                <nml_option name="config_topo_shading"          type="integer"       default_value="0"
+                     units="-"
+                     description="1: enable topographic shading static precompute; 0: disable"
+                     possible_values="0,1"/>
+                <nml_option name="config_shadlen"               type="real"          default_value="25000."
+                     units="m"
+                     description="maximum search length for terrain shading precompute"
+                     possible_values="Positive real values"/>
+                <!-- qkyang added to support slope and shading effects))))))))):-->
+
+                <nml_option name="config_vegfrac_data"          type="character"     default_value="MODIS"
+                     units="-"
+                     description="The climatological monthly vegetation fraction dataset to use (case 7 only)"
+                     possible_values="`MODIS' or `NCEP'"/>
+
+                <nml_option name="config_albedo_data"           type="character"     default_value="MODIS"
+                     units="-"
+                     description="The climatological monthly albedo dataset to use (case 7 only)"
+                     possible_values="`MODIS' or `NCEP'"/>
+
+                <nml_option name="config_maxsnowalbedo_data"    type="character"     default_value="MODIS"
+                     units="-"
+                     description="The maximum snow albedo dataset to use (case 7 only)"
+                     possible_values="`MODIS' or `NCEP'"/>
+
+                <nml_option name="config_supersample_factor"    type="integer"       default_value="3"
+                     units="-"
+                     description="The supersampling factor to be used for MODIS maximum snow albedo and monthly albedo datasets (case 7 only)"
+                     possible_values="Positive integer values"/>
+
+                <!-- qkyang added to speed init_static ((((((((: -->
+	          <nml_option name="config_lu_supersample_factor" type="integer"       default_value="1"
+                     units="-"
+                     description="The supersampling factor to be used for 30s or 15s MODIS land use, or for 30s USGS land use, as selected by `config_landuse_data' (case 7 only)"
+                     possible_values="Positive integer values"/>
+
+                <nml_option name="config_30s_supersample_factor"    type="integer"       default_value="1"
+                     units="-"
+                     description="The supersampling factor to be used for 30s terrain, soil category, and MODIS FPAR monthly vegetation fraction (case 7 only)"
+                     possible_values="Positive integer values"/>
+
+               <nml_option name="config_noahmp_static" type="logical" default_value="false" in_defaults="false"
+                     units="-"
+                     description="Whether to process, read, and write static fields only required by Noah-MP"
+                     possible_values="true or false"/>
+               <!-- qkyang added to speed init_static ))))))))): -->
+
+                <nml_option name="config_use_spechumd"          type="logical"       default_value="false"
+                     units="-"
+                     description="Whether to use specific-humidity as the first-guess moisture variable. If this option is False, relative humidity will be used."
+                     possible_values="true or false"/>
+                
+        </nml_record>
+
+        <nml_record name="vertical_grid" in_defaults="true">
+
+                <nml_option name="config_ztop"                  type="real"          default_value="30000.0"
+                     units="m"
+                     description="Model top height"
+                     possible_values="Positive real values"/>
+
+                <nml_option name="config_nsmterrain"            type="integer"       default_value="1"
+                     units="-"
+                     description="Number of smoothing passes to apply to the interpolated terrain field"
+                     possible_values="Non-negative integer values"/>
+
+                <nml_option name="config_smooth_surfaces"       type="logical"       default_value="true"
+                     units="-"
+                     description="Whether to smooth zeta surfaces"
+                     possible_values="true or false"/>
+
+                <nml_option name="config_dzmin"                 type="real"          default_value="0.3"
+                     units="-"
+                     description="Minimum thickness of layers as a fraction of nominal thickness"
+                     possible_values="Real values in the interval (0,1)"/>
+
+                <nml_option name="config_nsm"                   type="integer"       default_value="30"
+                     units="-"
+                     description="Maximum number of smoothing passes for coordinate surfaces"
+                     possible_values="Positive integer values"/>
+
+                <nml_option name="config_tc_vertical_grid"      type="logical"       default_value="true"
+                     units="-"
+                     description="Whether to use the vertical layer profile that was developed for use in real-time TC experiments"
+                     possible_values="true or false"/>
+
+                <nml_option name="config_specified_zeta_levels" type="character"     default_value=""    in_defaults="false"
+                     units="-"
+                     description="The name of a text file containing a list of vertical coordinate (zeta) values in increasing order at layer interfaces."
+                     possible_values="Any valid filename"/>
+
+                <nml_option name="config_blend_bdy_terrain"     type="logical"       default_value="false"
+                     units="-"
+                     description="Whether to blend terrain along domain boundaries with first-guess terrain. Only useful for limited-area domains."
+                     possible_values="true or false"/>
+
+                <nml_option name="config_cam_lev30"             type="logical"       default_value="false"
+                     units="-"
+                     description="Wheather use CAM5.3 30 levels to initialize the model"
+                     possible_values="true or false"/>
+
+                <nml_option name="config_cam_lev32"             type="logical"       default_value="false"
+                     units="-"
+                     description="Wheather use CAM5.4 32 levels to initialize the model"
+                     possible_values="true or false"/>
+
+                <nml_option name="config_log_pressure"          type="logical"       default_value="false"
+                     units="-"
+                     description="Whether to use logarithmic pressure representatiaon (phi = ln(p/p0)) while balancing the initial thermodynamic fields"
+                     possible_values="true or false"/>
+
+        </nml_record>
+
+        <nml_record name="interpolation_control" in_defaults="true">
+
+                <nml_option name="config_extrap_airtemp"        type="character"     default_value="lapse-rate"
+                     units="-"
+                     description="Method of extrapolation of air temperature above/below first-guess levels."
+                     possible_values="`constant' (last valid value), `linear' (linear extrapolation based on last two values), `lapse-rate' (0.0065 K/m from last valid value)"/>
+
+        </nml_record>
+
+        <nml_record name="preproc_stages" in_defaults="true">
+
+                <nml_option name="config_static_interp"         type="logical"       default_value="true"
+                     units="-"
+                     description="Whether to interpolate WPS static data (case 7 only)"
+                     possible_values="true or false"/>
+
+                <nml_option name="config_native_gwd_static"     type="logical"       default_value="true"
+                     units="-"
+                     description="Whether to recompute sub-grid-scale orography statistics directly on the native iAMAS mesh (case 7 only)"
+                     possible_values="true or false"/>
+
+                <nml_option name="config_gwd_cell_scaling"      type="real"          default_value="1.0"      in_defaults="false"
+                     units="-"
+                     description="Scaling factor for the effective grid cell diameter used in computation of GWD static fields"
+                     possible_values="Positive real values"/>
+
+                <nml_option name="config_vertical_grid"         type="logical"       default_value="true"
+                     units="-"
+                     description="Whether to generate vertical grid"
+                     possible_values="true or false"/>
+
+                <nml_option name="config_met_interp"            type="logical"       default_value="true"
+                     units="-"
+                     description="Whether to interpolate first-guess fields from intermediate file"
+                     possible_values="true or false"/>
+
+                <nml_option name="config_input_sst"             type="logical"       default_value="false"
+                     units="-"
+                     description="Whether to re-compute SST and sea-ice fields from surface input data set; should be set to .true. when running case 8"
+                     possible_values="true or false"/>
+
+                <nml_option name="config_input_chem"            type="logical"       default_value="false"
+                     units="-"
+                     description="Whether to input specific chem values as the first-guess chem variable. If this option is False, chem will be 1.0e-16 ug/kg."
+                     possible_values="true or false"/>
+
+                <nml_option name="config_frac_seaice"           type="logical"       default_value="true"
+                     units="-"
+                     description="Whether to switch sea-ice threshold from 0.5 to 0.02"
+                     possible_values="true or false"/>
+
+        </nml_record>
+
+        <nml_record name="io" in_defaults="true">
+
+                <nml_option name="config_pio_num_iotasks" type="integer" default_value="0"
+                     units="-"
+                     description="Number of tasks to perform file I/O"
+                     possible_values="Integer valued, 0 $\leq$ config_pio_num_iotasks $\leq$ \# MPI tasks, 0 indicates all tasks perform I/O"/>
+
+                <nml_option name="config_pio_stride" type="integer" default_value="1"
+                     units="-"
+                     description="Stride between file I/O tasks"
+                     possible_values="Integer valued, $\leq$ (\# MPI tasks) / config_pio_num_iotasks"/>
+
+                <nml_option name="config_is_init_atm" type="logical" default_value="true"
+                     units="-"
+                     description="Is init atmosphere"
+                     possible_values=".true. init atmosphere, .false. atmosphere"/>
+                    
+
+                <nml_option name="config_io_use_multiple_files" type="logical" default_value="false"
+                     units="-"
+                     description="Whether I/O using multiple files or not"
+                     possible_values=".true. use multiple files, .false. use single file"/>
+                
+
+                <nml_option name="config_io_do_output_indices" type="logical" default_value="false"
+                     units="-"
+                     description="Whether output indices"
+                     possible_values=".true. output indices, .false. not output indices"/>
+           
+
+                <nml_option name="config_pio_local_num_iotasks" type="integer" default_value="1"
+                     units="-"
+                     description="Local number of tasks to perform file I/O"
+                     possible_values="Integer valued, 0 $\leq$ config_pio_num_iotasks $\leq$ \# MPI tasks, 0 indicates all tasks perform I/O"/>
+
+                <nml_option name="config_pio_local_stride" type="integer" default_value="1"
+                     units="-"
+                      description="Stride between file local I/O tasks"
+                      possible_values="Integer valued, $\leq$ (\# MPI tasks) / config_pio_num_iotasks"/>
+
+        </nml_record>
+
+        <nml_record name="decomposition" in_defaults="true">
+                <!-- qkyang changed x1.40962.graph.info.part. to graph.info.part. -->
+                <nml_option name="config_block_decomp_file_prefix" type="character" default_value="graph.info.part."
+                     units="-"
+                     description="Prefix of graph decomposition file, to be suffixed with the MPI task count"
+                     possible_values="Any valid filename"/>
+
+                <nml_option name="config_number_of_blocks" type="integer" default_value="0" in_defaults="false"
+                     units="-"
+                     description="Number of blocks to assign to each MPI task"
+                     possible_values="Positive integer values"/>
+
+                <nml_option name="config_explicit_proc_decomp" type="logical" default_value="false" in_defaults="false"
+                     units="-"
+                     description="Whether to use an explicit mapping of blocks to MPI tasks"
+                     possible_values=".true. or .false."/>
+
+                <nml_option name="config_proc_decomp_file_prefix" type="character" default_value="graph.info.part." in_defaults="false"
+                     units="-"
+                     description="Prefix of block mapping file"
+                     possible_values="Any valid filename"/>
+
+        </nml_record>
+
+
+<!-- **************************************************************************************** -->
+<!-- **************************************  Packages  ************************************** -->
+<!-- **************************************************************************************** -->
+        <packages>
+                <package name="initial_conds" description="Used by test cases that produce initial conditions."/>
+                <package name="sfc_update" description="Used by test cases that produce surface updates."/>
+                <package name="lbcs" description="Active when lateral boundary conditions are interpolated and written."/>
+                <package name="lbc_chemistry" description="Active only when chemistry lateral boundary conditions are requested."/>
+                <!-- zhxia add this for emission update. 0415/2025  -->
+                <package name="emis_update" description="Used by test cases that produce emission updates."/>
+                <package name="fdda_update" description="Used by test cases that produce fdda updates."/>
+                <package name="gwd_stage_in" description="Active only if GWD static fields are be generated and other static fields are not being generated"/>
+                <package name="gwd_stage_out" description="Active only if GWD static fields are be generated and other static fields are not being generated"/>
+                <package name="vertical_stage_in" description="Active only if a vertical grid is being generated"/>
+                <package name="vertical_stage_out" description="Active only if a vertical grid is being generated"/>
+                <package name="met_stage_in" description="Active only if meteorological fields are being interpolated"/>
+                <package name="met_stage_out" description="Active only if meteorological fields are being interpolated"/>
+        </packages>
+
+
+<!-- **************************************************************************************** -->
+<!-- *************************************** Streams **************************************** -->
+<!-- **************************************************************************************** -->
+
+	<streams>
+		<stream name="input"
+                        type="input"
+                        filename_template="x1.40962.grid.nc"
+                        input_interval="initial_only"
+                        immutable="true">
+
+                        <var name="latCell"/>
+                        <var name="lonCell"/>
+                        <var name="xCell"/>
+                        <var name="yCell"/>
+                        <var name="zCell"/>
+                        <var name="indexToCellID"/>
+                        <var name="latEdge"/>
+                        <var name="lonEdge"/>
+                        <var name="xEdge"/>
+                        <var name="yEdge"/>
+                        <var name="zEdge"/>
+                        <var name="indexToEdgeID"/>
+                        <var name="latVertex"/>
+                        <var name="lonVertex"/>
+                        <var name="xVertex"/>
+                        <var name="yVertex"/>
+                        <var name="zVertex"/>
+                        <var name="indexToVertexID"/>
+                        <var name="cellsOnEdge"/>
+                        <var name="nEdgesOnCell"/>
+                        <var name="nEdgesOnEdge"/>
+                        <var name="edgesOnCell"/>
+                        <var name="edgesOnEdge"/>
+                        <var name="weightsOnEdge"/>
+                        <var name="dvEdge"/>
+                        <var name="dcEdge"/>
+                        <var name="angleEdge"/>
+                        <var name="areaCell"/>
+                        <var name="areaTriangle"/>
+                        <var name="cellsOnCell"/>
+                        <var name="verticesOnCell"/>
+                        <var name="verticesOnEdge"/>
+                        <var name="edgesOnVertex"/>
+                        <var name="cellsOnVertex"/>
+                        <var name="kiteAreasOnVertex"/>
+                        <var name="meshDensity"/>
+                        <!-- qkyang added to speed init_static ((((((((: -->
+                        <var name="nominalMinDc"/>
+                        <!-- qkyang added to speed init_static ))))))))): -->
+                        <var name="bdyMaskCell"/>
+                        <var name="bdyMaskEdge"/>
+                        <var name="bdyMaskVertex"/>
+                        <var name="edgeNormalVectors" packages="gwd_stage_in;vertical_stage_in;met_stage_in"/>
+                        <var name="localVerticalUnitVectors" packages="gwd_stage_in;vertical_stage_in;met_stage_in"/>
+                        <var name="cellTangentPlane" packages="gwd_stage_in;vertical_stage_in;met_stage_in"/>
+                        <var name="fEdge" packages="gwd_stage_in;vertical_stage_in;met_stage_in"/>
+                        <var name="fVertex" packages="gwd_stage_in;vertical_stage_in;met_stage_in"/>
+                        <var name="ter" packages="gwd_stage_in;vertical_stage_in;met_stage_in"/>
+                        <var name="landmask" packages="gwd_stage_in;vertical_stage_in;met_stage_in"/>
+                        <var name="mminlu" packages="gwd_stage_in;vertical_stage_in;met_stage_in"/>
+                        <var name="isice_lu" packages="gwd_stage_in;vertical_stage_in;met_stage_in"/>
+                        <var name="iswater_lu" packages="gwd_stage_in;vertical_stage_in;met_stage_in"/>
+                        <var name="ivgtyp" packages="gwd_stage_in;vertical_stage_in;met_stage_in"/>
+                        <var name="isltyp" packages="gwd_stage_in;vertical_stage_in;met_stage_in"/>
+                        <var name="soilctop" packages="gwd_stage_in;vertical_stage_in;met_stage_in"/>
+                        <var name="landusef" packages="gwd_stage_in;vertical_stage_in;met_stage_in"/>
+                        <var name="snoalb" packages="gwd_stage_in;vertical_stage_in;met_stage_in"/>
+                        <var name="soiltemp" packages="gwd_stage_in;vertical_stage_in;met_stage_in"/>
+                        <var name="greenfrac" packages="gwd_stage_in;vertical_stage_in;met_stage_in"/>
+                        <var name="shdmin" packages="gwd_stage_in;vertical_stage_in;met_stage_in"/>
+                        <var name="shdmax" packages="gwd_stage_in;vertical_stage_in;met_stage_in"/>
+                        <var name="albedo12m" packages="gwd_stage_in;vertical_stage_in;met_stage_in"/>
+                        <!-- qkyang added to support slope and shading effects((: -->
+                        <var name="ter_slope"/>
+                        <var name="ter_hx"/>
+                        <var name="ter_hy"/>
+                        <var name="ter_horizon_angle"/>
+                        <!-- qkyang added to support slope and shading effects)): -->
+                        <var name="var2d" packages="vertical_stage_in;met_stage_in"/>
+                        <var name="con" packages="vertical_stage_in;met_stage_in"/>
+                        <var name="oa1" packages="vertical_stage_in;met_stage_in"/>
+                        <var name="oa2" packages="vertical_stage_in;met_stage_in"/>
+                        <var name="oa3" packages="vertical_stage_in;met_stage_in"/>
+                        <var name="oa4" packages="vertical_stage_in;met_stage_in"/>
+                        <var name="ol1" packages="vertical_stage_in;met_stage_in"/>
+                        <var name="ol2" packages="vertical_stage_in;met_stage_in"/>
+                        <var name="ol3" packages="vertical_stage_in;met_stage_in"/>
+                        <var name="ol4" packages="vertical_stage_in;met_stage_in"/>
+                        <!-- qkyang added to support building turbulence model((: -->
+                        <var name="Upstream_zr"/>
+                        <var name="Upstream_zr_std"/>
+                        <var name="Upstream_rf"/>
+                        <var name="Upstream_rd"/>
+                        <var name="UpstreamAngles"/>
+                        <var name="Upstream_zd"/>
+                        <var name="Upstream_RSL"/>
+                        <var name="Upstream_Z0C"/>
+                        <!-- qkyang added to support building turbulence model)): -->
+                        <var name="deriv_two" packages="gwd_stage_in;vertical_stage_in;met_stage_in"/>
+                        <var name="grad_wgt" packages="gwd_stage_in;vertical_stage_in;met_stage_in"/>
+                        <var name="advCells" packages="gwd_stage_in;vertical_stage_in;met_stage_in"/>
+                        <var name="defc_a" packages="gwd_stage_in;vertical_stage_in;met_stage_in"/>
+                        <var name="defc_b" packages="gwd_stage_in;vertical_stage_in;met_stage_in"/>
+                        <var name="coeffs_reconstruct" packages="gwd_stage_in;vertical_stage_in;met_stage_in"/>
+                        <var name="cf1" packages="met_stage_in"/>
+                        <var name="cf2" packages="met_stage_in"/>
+                        <var name="cf3" packages="met_stage_in"/>
+                        <var name="hx" packages="met_stage_in"/>
+                        <var name="zgrid" packages="met_stage_in"/>
+                        <var name="rdzw" packages="met_stage_in"/>
+                        <var name="dzu" packages="met_stage_in"/>
+                        <var name="rdzu" packages="met_stage_in"/>
+                        <var name="fzm" packages="met_stage_in"/>
+                        <var name="fzp" packages="met_stage_in"/>
+                        <var name="zxu" packages="met_stage_in"/>
+                        <var name="zz" packages="met_stage_in"/>
+                        <var name="zb" packages="met_stage_in"/>
+                        <var name="zb3" packages="met_stage_in"/>
+                        <var name="dss" packages="met_stage_in"/>
+		</stream>
+
+		<stream name="output"
+                        type="output"
+                        filename_template="x1.40962.init.nc"
+                        output_interval="initial_only"
+                        packages="initial_conds"
+                        runtime_format="separate_file">
+
+                        <var name="initial_time" packages="met_stage_out"/>
+                        <var name="xtime"/>
+                        <var name="latCell"/>
+                        <var name="lonCell"/>
+                        <var name="xCell"/>
+                        <var name="yCell"/>
+                        <var name="zCell"/>
+                        <var name="indexToCellID"/>
+                        <var name="latEdge"/>
+                        <var name="lonEdge"/>
+                        <var name="xEdge"/>
+                        <var name="yEdge"/>
+                        <var name="zEdge"/>
+                        <var name="indexToEdgeID"/>
+                        <var name="latVertex"/>
+                        <var name="lonVertex"/>
+                        <var name="xVertex"/>
+                        <var name="yVertex"/>
+                        <var name="zVertex"/>
+                        <var name="indexToVertexID"/>
+                        <var name="cellsOnEdge"/>
+                        <var name="nEdgesOnCell"/>
+                        <var name="nEdgesOnEdge"/>
+                        <var name="edgesOnCell"/>
+                        <var name="edgesOnEdge"/>
+                        <var name="weightsOnEdge"/>
+                        <var name="dvEdge"/>
+                        <var name="dcEdge"/>
+                        <var name="angleEdge"/>
+                        <var name="areaCell"/>
+                        <var name="areaTriangle"/>
+                        <var name="cellsOnCell"/>
+                        <var name="verticesOnCell"/>
+                        <var name="verticesOnEdge"/>
+                        <var name="edgesOnVertex"/>
+                        <var name="cellsOnVertex"/>
+                        <var name="kiteAreasOnVertex"/>
+                        <var name="meshDensity"/>
+                        <!-- qkyang added to speed init_static ((((((((: -->
+                        <var name="nominalMinDc"/>
+                        <!-- qkyang added to speed init_static ))))))))): -->
+                        <var name="bdyMaskCell"/>
+                        <var name="bdyMaskEdge"/>
+                        <var name="bdyMaskVertex"/>
+                        <var name="edgeNormalVectors"/>
+                        <var name="localVerticalUnitVectors"/>
+                        <var name="cellTangentPlane"/>
+                        <var name="fEdge"/>
+                        <var name="fVertex"/>
+                        <var name="ter"/>
+                        <var name="landmask"/>
+                        <var name="mminlu"/>
+                        <var name="isice_lu"/>
+                        <var name="iswater_lu"/>
+                        <var name="ivgtyp"/>
+                        <var name="isltyp"/>
+                        <var name="soilctop"/>
+                        <var name="landusef"/>
+                        <var name="snoalb"/>
+                        <var name="soiltemp"/>
+                        <var name="greenfrac"/>
+                        <var name="shdmin"/>
+                        <var name="shdmax"/>
+                        <var name="albedo12m"/>
+                        <!-- qkyang added to support slope and shading effects((: -->
+                        <var name="ter_slope"/>
+                        <var name="ter_hx"/>
+                        <var name="ter_hy"/>
+                        <var name="ter_horizon_angle"/>
+                        <!-- qkyang added to support slope and shading effects)): -->
+                        <var name="var2d" packages="gwd_stage_out;vertical_stage_out;met_stage_out"/>
+                        <var name="con" packages="gwd_stage_out;vertical_stage_out;met_stage_out"/>
+                        <var name="oa1" packages="gwd_stage_out;vertical_stage_out;met_stage_out"/>
+                        <var name="oa2" packages="gwd_stage_out;vertical_stage_out;met_stage_out"/>
+                        <var name="oa3" packages="gwd_stage_out;vertical_stage_out;met_stage_out"/>
+                        <var name="oa4" packages="gwd_stage_out;vertical_stage_out;met_stage_out"/>
+                        <var name="ol1" packages="gwd_stage_out;vertical_stage_out;met_stage_out"/>
+                        <var name="ol2" packages="gwd_stage_out;vertical_stage_out;met_stage_out"/>
+                        <var name="ol3" packages="gwd_stage_out;vertical_stage_out;met_stage_out"/>
+                        <var name="ol4" packages="gwd_stage_out;vertical_stage_out;met_stage_out"/>
+                        <var name="deriv_two"/>
+                        <var name="grad_wgt"/>
+                        <var name="advCells"/>
+                        <var name="defc_a"/>
+                        <var name="defc_b"/>
+                        <var name="coeffs_reconstruct"/>
+                        <var name="cf1" packages="vertical_stage_out;met_stage_out"/>
+                        <var name="cf2" packages="vertical_stage_out;met_stage_out"/>
+                        <var name="cf3" packages="vertical_stage_out;met_stage_out"/>
+                        <var name="hx" packages="vertical_stage_out;met_stage_out"/>
+                        <var name="zgrid" packages="vertical_stage_out;met_stage_out"/>
+                        <var name="rdzw" packages="vertical_stage_out;met_stage_out"/>
+                        <var name="dzu" packages="vertical_stage_out;met_stage_out"/>
+                        <var name="rdzu" packages="vertical_stage_out;met_stage_out"/>
+                        <var name="fzm" packages="vertical_stage_out;met_stage_out"/>
+                        <var name="fzp" packages="vertical_stage_out;met_stage_out"/>
+                        <var name="zxu" packages="vertical_stage_out;met_stage_out"/>
+                        <var name="zz" packages="vertical_stage_out;met_stage_out"/>
+                        <var name="zb" packages="vertical_stage_out;met_stage_out"/>
+                        <var name="zb3" packages="vertical_stage_out;met_stage_out"/>
+                        <var name="dss" packages="vertical_stage_out;met_stage_out"/>
+                        <var name="u_init" packages="met_stage_out"/>
+                        <var name="v_init" packages="met_stage_out"/>
+                        <var name="t_init" packages="met_stage_out"/>
+                        <var name="qv_init" packages="met_stage_out"/>
+                        <var_array name="scalars" packages="met_stage_out"/>
+                        <var_array name="chem" packages="met_stage_out"/>
+                        <var name="u" packages="met_stage_out"/>
+                        <var name="w" packages="met_stage_out"/>
+                        <var name="erod" packages="met_stage_out"/>
+                        <var name="dms_0" packages="met_stage_out"/>
+                        <!-- qkyang added to support anthropogenic heating emissions((: -->
+                        <var name="AH_emis" packages="met_stage_out"/>
+                        <!-- qkyang added to support anthropogenic heating emissions)): -->
+                        <!-- qkyang added to support building turbulence model((: -->
+                        <var name="Upstream_zr"/>
+                        <var name="Upstream_zr_std"/>
+                        <var name="Upstream_rf"/>
+                        <var name="Upstream_rd"/>
+                        <var name="UpstreamAngles"/>
+                        <var name="Upstream_zd"/>
+                        <var name="Upstream_RSL"/>
+                        <var name="Upstream_Z0C"/>
+                        <!-- qkyang added to support building turbulence model)): -->
+                        <var name="dz" packages="met_stage_out"/>
+                        <var name="dzs" packages="met_stage_out"/>
+                        <var name="zs" packages="met_stage_out"/>
+                        <var name="sh2o" packages="met_stage_out"/>
+                        <var name="smois" packages="met_stage_out"/>
+                        <var name="tslb" packages="met_stage_out"/>
+                        <var name="tmn" packages="met_stage_out"/>
+                        <var name="skintemp" packages="met_stage_out"/>
+                        <var name="sst" packages="met_stage_out"/>
+                        <var name="snow" packages="met_stage_out"/>
+                        <var name="snowc" packages="met_stage_out"/>
+                        <var name="snowh" packages="met_stage_out"/>
+                        <var name="xice" packages="met_stage_out"/>
+                        <var name="seaice" packages="met_stage_out"/>
+                        <var name="vegfra" packages="met_stage_out"/>
+                        <var name="sfc_albbck" packages="met_stage_out"/>
+                        <var name="xland" packages="met_stage_out"/>
+                        <var name="rho" packages="met_stage_out"/>
+                        <var name="theta" packages="met_stage_out"/>
+                        <var name="relhum" packages="met_stage_out"/>
+                        <var name="rho_base" packages="met_stage_out"/>
+                        <var name="theta_base" packages="met_stage_out"/>
+                        <var name="surface_pressure" packages="met_stage_out"/>
+                        <var name="precipw" packages="met_stage_out"/>
+                        <var name="h_oml_initial" packages="met_stage_out"/>
+                        <var name="u10" packages="met_stage_out"/>
+                        <var name="v10" packages="met_stage_out"/>
+                        <var name="q2" packages="met_stage_out"/>
+                        <var name="rh2" packages="met_stage_out"/>
+                        <var name="t2m" packages="met_stage_out"/>
+		</stream>
+
+		<stream name="surface"
+                        type="output"
+                        filename_template="x1.40962.sfc_update.nc"
+                        output_interval="86400"
+                        filename_interval="none"
+                        packages="sfc_update"
+                        immutable="true">
+
+			<var name="xtime"/>
+			<var name="sst"/>
+			<var name="xice"/>
+		</stream>
+
+		<stream name="fdda"
+                        type="output"
+                        filename_template="x1.40962.fdda.nc"
+                        output_interval="21600"
+                        filename_interval="none"
+                        packages="fdda_update"
+                        immutable="true">
+
+               <var name="xtime"/>
+               <var_struct name="fdda"/>
+		</stream>
+
+
+		<stream name="lbc"
+                        type="output"
+                        filename_template="lbc.$Y-$M-$D_$h.$m.$s.nc"
+                        output_interval="3:00:00"
+                        filename_interval="output_interval"
+                        packages="lbcs"
+			runtime_format="separate_file">
+
+			<var name="xtime"/>
+			<var_struct name="lbc_state"/>
+                        <var_array name="lbc_chem"/>
+		</stream>
+
+                <!-- zhxia add this for emission update. 0415/2025 --> 
+                <stream name="emission"
+                        type="output"
+                        filename_template="x1.40962.emis_update.nc"
+                        output_interval="1:00:00"
+                        filename_interval="none"
+                        packages="emis_update"
+                        immutable="true">
+
+                        <var name="xtime"/>
+                        <var_struct name="emis_state"/>
+                </stream>
+
+
+		<stream name="chem_input"
+                        type="input"
+                        filename_template="iamas_chem_input.nc"
+                        input_interval="initial_only"
+                        immutable="true">
+
+			<var_array name="chem"/>
+		</stream>
+	</streams>
+
+
+<!-- **************************************************************************************** -->
+<!-- ************************************** Variables *************************************** -->
+<!-- **************************************************************************************** -->
+
+        <var_struct name="mesh" time_levs="1">
+
+                <var name="latCell" type="real" dimensions="nCells" units="rad"
+                     description="Latitude of cells"/>
+
+                <var name="lonCell" type="real" dimensions="nCells" units="rad"
+                     description="Longitude of cells"/>
+
+                <var name="xCell" type="real" dimensions="nCells" units="m"
+                     description="Cartesian x-coordinate of cells"/>
+
+                <var name="yCell" type="real" dimensions="nCells" units="m"
+                     description="Cartesian y-coordinate of cells"/>
+
+                <var name="zCell" type="real" dimensions="nCells" units="m"
+                     description="Cartesian z-coordinate of cells"/>
+
+                <var name="indexToCellID" type="integer" dimensions="nCells" units="-"
+                     description="Mapping from local array index to global cell ID"/>
+
+                <var name="latEdge" type="real" dimensions="nEdges" units="rad"
+                     description="Latitude of edges"/>
+
+                <var name="lonEdge" type="real" dimensions="nEdges" units="rad"
+                     description="Longitude of edges"/>
+
+                <var name="xEdge" type="real" dimensions="nEdges" units="m"
+                     description="Cartesian x-coordinate of edges"/>
+
+                <var name="yEdge" type="real" dimensions="nEdges" units="m"
+                     description="Cartesian y-coordinate of edges"/>
+
+                <var name="zEdge" type="real" dimensions="nEdges" units="m"
+                     description="Cartesian z-coordinate of edges"/>
+
+                <var name="indexToEdgeID" type="integer" dimensions="nEdges" units="-"
+                     description="Mapping from local array index to global edge ID"/>
+
+                <var name="latVertex" type="real" dimensions="nVertices" units="rad"
+                     description="Latitude of vertices"/>
+
+                <var name="lonVertex" type="real" dimensions="nVertices" units="rad"
+                     description="Longitude of vertices"/>
+
+                <var name="xVertex" type="real" dimensions="nVertices" units="m"
+                     description="Cartesian x-coordinate of vertices"/>
+
+                <var name="yVertex" type="real" dimensions="nVertices" units="m"
+                     description="Cartesian y-coordinate of vertices"/>
+
+                <var name="zVertex" type="real" dimensions="nVertices" units="m"
+                     description="Cartesian z-coordinate of vertices"/>
+
+                <var name="indexToVertexID" type="integer" dimensions="nVertices" units="-"
+                     description="Mapping from local array index to global vertex ID"/>
+
+                <var name="cellsOnEdge" type="integer" dimensions="TWO nEdges" units="-"
+                     description="IDs of cells divided by an edge"/>
+
+                <var name="nEdgesOnCell" type="integer" dimensions="nCells" units="-"
+                     description="Number of edges forming the boundary of a cell"/>
+
+                <var name="nEdgesOnEdge" type="integer" dimensions="nEdges" units="-"
+                     description="Number of edges involved in reconstruction of tangential velocity for an edge"/>
+
+                <var name="edgesOnCell" type="integer" dimensions="maxEdges nCells" units="-"
+                     description="IDs of edges forming the boundary of a cell"/>
+
+                <var name="edgesOnEdge" type="integer" dimensions="maxEdges2 nEdges" units="-"
+                     description="IDs of edges involved in reconstruction of tangential velocity for an edge"/>
+
+                <var name="weightsOnEdge" type="real" dimensions="maxEdges2 nEdges" units="-"
+                     description="Weights used in reconstruction of tangential velocity for an edge"/>
+
+                <var name="dvEdge" type="real" dimensions="nEdges" units="-"
+                     description="Spherical distance between vertex endpoints of an edge"/>
+
+                <var name="dcEdge" type="real" dimensions="nEdges" units="m"
+                     description="Spherical distance between cells separated by an edge"/>
+
+                <var name="angleEdge" type="real" dimensions="nEdges" units="rad"
+                     description="Angle between local north and the positive tangential direction of an edge"/>
+
+                <var name="areaCell" type="real" dimensions="nCells" units="m^2"
+                     description="Spherical area of a Voronoi cell"/>
+
+                <var name="areaTriangle" type="real" dimensions="nVertices" units="m^2"
+                     description="Spherical area of a Delaunay triangle"/>
+
+                <var name="edgeNormalVectors" type="real" dimensions="R3 nEdges" units="unitless"
+                     description="Cartesian components of the vector normal to an edge and tangential to the surface of the sphere"/>
+
+                <var name="localVerticalUnitVectors" type="real" dimensions="R3 nCells" units="unitless"
+                     description="Cartesian components of the vector pointing in the local vertical direction for a cell"/>
+
+                <var name="cellTangentPlane" type="real" dimensions="R3 TWO nCells" units="unitless"
+                     description="Components of a pair of vectors defining the tangent plane at a cell"/>
+
+                <var name="cellsOnCell" type="integer" dimensions="maxEdges nCells" units="-"
+                     description="IDs of cells neighboring a cell"/>
+
+                <var name="verticesOnCell" type="integer" dimensions="maxEdges nCells" units="-"
+                     description="IDs of vertices (corner points) of a cell"/>
+
+                <var name="verticesOnEdge" type="integer" dimensions="TWO nEdges" units="-"
+                     description="IDs of the two vertex endpoints of an edge"/>
+
+                <var name="edgesOnVertex" type="integer" dimensions="vertexDegree nVertices" units="-"
+                     description="IDs of the edges that meet at a vertex"/>
+
+                <var name="cellsOnVertex" type="integer" dimensions="vertexDegree nVertices" units="-"
+                     description="IDs of the cells that meet at a vertex"/>
+
+                <var name="kiteAreasOnVertex" type="real" dimensions="vertexDegree nVertices" units="m^2"
+                     description="Intersection areas between primal (Voronoi) and dual (triangular) mesh cells"/>
+
+                <var name="fEdge" type="real" dimensions="nEdges" units="unitless"
+                     description="Coriolis parameter at an edge"/>
+
+                <var name="fVertex" type="real" dimensions="nVertices" units="unitless"
+                     description="Coriolis parameter at a vertex"/>
+
+                <var name="meshDensity" type="real" dimensions="nCells" units="unitless"
+                     description="Mesh density function (used when generating the mesh) evaluated at a cell"/>
+
+                <!-- qkyang added to speed init_static ((((((((: -->
+                <var name="nominalMinDc" type="real" dimensions="" units="m"
+                     description="Nominal minimum dcEdge value where meshDensity == 1.0"/>
+               <!-- qkyang added to speed init_static ))))))))): -->
+
+                <!-- coefficients for vertical extrapolation to the surface -->
+                <var name="cf1" type="real" dimensions="" units="unitless"
+                     description="Surface interpolation weight for level k=1 value"/>
+
+                <var name="cf2" type="real" dimensions="" units="unitless"
+                     description="Surface interpolation weight for level k=2 value"/>
+
+                <var name="cf3" type="real" dimensions="" units="unitless"
+                     description="Surface interpolation weight for level k=3 value"/>
+
+                <!-- static terrestrial fields -->
+                <var name="ter" type="real" dimensions="nCells" units="m"
+                     description="terrain height"/>
+
+                <var name="landmask" type="integer"  dimensions="nCells" units="unitless"
+                     description="land-ocean mask (1=land ; 0=ocean)"/>
+
+                <var name="ivgtyp" name_in_code="lu_index" type="integer"  dimensions="nCells" units="unitless"
+                     description="dominant vegetation category"/>
+
+                <var name="mminlu" type="text" dimensions="" units="unitless"
+                     description="land use classification"/>
+
+                <var name="isltyp" name_in_code="soilcat_top"  type="integer"  dimensions="nCells" units="unitless"
+                     description="dominate soil category"/>
+
+                <var name="soilctop"  type="real"  dimensions="nSoilTypes nCells" units="unitless"
+                     description="16-category top-layer soil type"/>
+
+                <var name="landusef"  type="real"  dimensions="nLanduseTypes nCells" units="unitless"
+                     description="landuse"/>
+
+                <var name="snoalb" type="real" dimensions="nCells" units="unitless"
+                     description="annual maximum snow albedo"/>
+
+                <var name="soiltemp" type="real" dimensions="nCells" units="K"
+                     description="annual mean deep soil temperature"/>
+
+                <var name="greenfrac" type="real" dimensions="nMonths nCells" units="unitless"
+                     description="monthly-mean climatological greeness fraction"/>
+
+                <var name="shdmin" type="real" dimensions="nCells" units="unitless"
+                     description="minimum fractional coverage of annual green vegetation fraction"/>
+
+                <var name="shdmax" type="real" dimensions="nCells" units="unitless"
+                     description="maximum fractional coverage of annual green vegetation fraction"/>
+
+                <var name="albedo12m" type="real" dimensions="nMonths nCells" units="unitless"
+                     description="monthly-mean climatological surface albedo"/>
+
+               <!-- qkyang added to support slope and shading effects((: -->
+                <var name="ter_slope" type="real" dimensions="nCells" units="rad"
+                     description="terrain slope angle from static least-squares terrain gradient"/>
+
+                <var name="ter_hx" type="real" dimensions="nCells" units="m m^{-1}"
+                     description="x-direction terrain gradient for static slope/shadow correction"/>
+
+                <var name="ter_hy" type="real" dimensions="nCells" units="m m^{-1}"
+                     description="y-direction terrain gradient for static slope/shadow correction"/>
+
+                <var name="ter_horizon_angle" type="real" dimensions="nShadowDirBins nCells" units="rad"
+                     description="directional terrain horizon angle for shadow lookup in static preprocessing"/>
+               <!-- qkyang added to support slope and shading effects)): -->
+
+                <var name="isice_lu" type="integer" dimensions="" units="unitless" default_value="24"
+                     description="Index category for snow/ice"/>
+
+                <var name="iswater_lu" type="integer" dimensions="" units="unitless" default_value="16"
+                     description="Index category for water"/>
+
+                <!-- GWDO fields -->
+                <var name="var2d" type="real" dimensions="nCells" units="m^{2}"
+                     description="variance of orography"/>
+
+                <var name="con" type="real" dimensions="nCells" units="m^{2}"
+                     description="convexity of orography"/>
+
+                <var name="oa1" type="real" dimensions="nCells" units="unitless"
+                     description="directional asymmetry function of orography"/>
+
+                <var name="oa2" type="real" dimensions="nCells" units="unitless"
+                     description="directional asymmetry function of orography"/>
+
+                <var name="oa3" type="real" dimensions="nCells" units="unitless"
+                     description="directional asymmetry function of orography"/>
+
+                <var name="oa4" type="real" dimensions="nCells" units="unitless"
+                     description="directional asymmetry function of orography"/>
+
+                <var name="ol1" type="real" dimensions="nCells" units="unitless"
+                     description="directional asymmetry function of orography"/>
+
+                <var name="ol2" type="real" dimensions="nCells" units="unitless"
+                     description="directional asymmetry function of orography"/>
+
+                <var name="ol3" type="real" dimensions="nCells" units="unitles"
+                     description="directional asymmetry function of orography"/>
+
+                <var name="ol4" type="real" dimensions="nCells" units="unitless"
+                     description="directional asymmetry function of orography"/>
+
+               <!-- qkyang added to support building turbulence model((: -->
+                <var name="Upstream_zr" type="real" dimensions="nUpstreamSect nCells" units="m" 
+                      description="Roof level (building height) for nUpstreamSect Upstream sectors" />
+
+                <var name="Upstream_zr_std" type="real" dimensions="nUpstreamSect nCells" units="m" 
+                     description="Standard deviation of Upstream_zr for nUpstreamSect Upstream sectors" />
+
+                <var name="Upstream_rf" type="real" dimensions="nUpstreamSect nCells" units="m" 
+                     description="Upstream roof (i.e., building) height for nUpstreamSect Upstream sectors" />
+
+                <var name="Upstream_rd" type="real" dimensions="nUpstreamSect nCells" units="m" 
+                     description="Upstream road width for nUpstreamSect Upstream sectors" />
+                     
+                <var name="UpstreamAngles" type="real" dimensions="nUpstreamSect" units="degrees" 
+                     description="Upstream sector center angles for nUpstreamSect Upstream sectors (clockwise from north)" />
+
+                <var name="Upstream_zd" type="real" dimensions="nUpstreamSect nCells" units="m" 
+                     description="Zero-plane displacement for nUpstreamSect Upstream sectors" />
+
+                <var name="Upstream_RSL" type="real" dimensions="nUpstreamSect nCells" units="m" 
+                     description="Roughness sublayer height for nUpstreamSect Upstream sectors" />
+
+                <var name="Upstream_Z0C" type="real" dimensions="nUpstreamSect nCells" units="m" 
+                     description="Roughness length for nUpstreamSect Upstream sectors" />
+               <!-- qkyang added to support building turbulence model)): -->
+
+                <!-- description of the vertical grid structure -->
+                <var name="hx" type="real" dimensions="nVertLevelsP1 nCells" units="m"
+                     description="terrain influence in vertical coordinate, $h_s(x,y,\zeta)$ in Klemp (MWR 2011)"/>
+
+                <var name="zgrid" type="real" dimensions="nVertLevelsP1 nCells" units="m MSL"
+                     description="Geometric height of layer interfaces"/>
+
+                <var name="rdzw" type="real" dimensions="nVertLevels" units="unitless"
+                     description="Reciprocal dzw"/>
+
+                <var name="dzu" type="real" dimensions="nVertLevels" units="unitless"
+                     description="d(zeta) at w levels"/>
+
+                <var name="rdzu" type="real" dimensions="nVertLevels" units="unitless"
+                     description="Reciprocal dzu"/>
+
+                <var name="fzm" type="real" dimensions="nVertLevels" units="unitless"
+                     description="Weight for linear interpolation to w(k) point for u(k) level variable"/>
+
+                <var name="fzp" type="real" dimensions="nVertLevels" units="unitless"
+                     description="Weight for linear interpolation to w(k) point for u(k-1) level variable"/>
+
+                <var name="zxu" type="real" dimensions="nVertLevels nEdges" units="unitless"
+                     description="dz/dx on horizontal coordinate surfaces at u levels"/>
+
+                <var name="zz" type="real" dimensions="nVertLevels nCells" units="unitless"
+                     description="d(zeta)/dz, vertical metric term"/>
+
+                <var name="zb" type="real" dimensions="nVertLevelsP1 TWO nEdges" units="unitless"
+                     description="Coefficients for contribution from u to omega diagnosis, edge-oriented"/>
+
+                <var name="zb3" type="real" dimensions="nVertLevelsP1 TWO nEdges" units="unitless"
+                     description="Coefficients for 3rd-order correction to contribution from u to omega diagnosis, edge-oriented"/>
+
+                <!-- W-Rayleigh damping coefficient -->
+                <var name="dss" type="real" dimensions="nVertLevels nCells" units="unitless"
+                     description="w-damping coefficient"/>
+
+                <var name="u_init" type="real" dimensions="nVertLevels" units="m s^{-1}"
+                     description="u reference profile"/>
+
+                <var name="v_init" type="real" dimensions="nVertLevels" units="m s^{-1}"
+                     description="v reference profile"/>
+
+                <var name="t_init" type="real" dimensions="nVertLevels nCells" units="K"
+                     description="theta reference profile"/>
+
+                <var name="qv_init" type="real" dimensions="nVertLevels" units="kg kg^{-1}"
+                     description="qv reference profile"/>
+
+                <!-- variables needed for advection -->
+                <var name="deriv_two" type="real" dimensions="FIFTEEN TWO nEdges" units="unitless"
+                     description="weights for cell-centered second derivative, normal to edge, for transport scheme"/>
+
+                <var name="grad_wgt" type="real" dimensions="maxEdgesP1 TWO nEdges" units="unitless"
+                     description="weights for scalar in current cell and its neighbour cell to get the estimated value of directional gradient at upwind cell based on 2nd-order polynomials, for tvd-ffsl transport scheme"/>
+
+                <var name="advCells" type="integer" dimensions="TWENTYONE nCells" units="-"
+                     description="cells used in least squares fit of polynomial for advection"/>
+
+                <!-- deformation calculation weights -->
+                <var name="defc_a" type="real" dimensions="maxEdges nCells" units="unitless"
+                     description="Coefficients for computing the off-diagonal components of the horizontal deformation"/>
+
+                <var name="defc_b" type="real" dimensions="maxEdges nCells" units="unitless"
+                     description="Coefficients for computing the diagonal components of the horizontal deformation"/>
+
+                <!-- arrays required for reconstruction of velocity field -->
+                <var name="coeffs_reconstruct" type="real" dimensions="R3 maxEdges nCells" units="unitless"
+                     description="Coefficients to reconstruct velocity vectors at cell centers"/>
+
+                <var name="bdyMaskCell" type="integer" dimensions="nCells" default_value="0" units="-"
+                     description="Indicator of whether a cell is an interior cell, a relaxation-zone cell, or a specified-zone cell"/>
+
+                <var name="bdyMaskEdge" type="integer" dimensions="nEdges" default_value="0" units="-"
+                     description="Indicator of whether an edge is an interior edge, a relaxation-zone edge, or a specified-zone edge"/>
+
+                <var name="bdyMaskVertex" type="integer" dimensions="nVertices" default_value="0" units="-"
+                     description="Indicator of whether an vertex is an interior vertex, a relaxation-zone vertex, or a specified-zone vertex"/>
+        </var_struct>
+
+        <var_struct name="state" time_levs="1">
+                <var name="initial_time" type="text" dimensions="" units="YYYY-MM-DD_hh:mm:ss"
+                     description="Model initialization time"/>
+
+                <var name="xtime" type="text" dimensions="Time" units="YYYY-MM-DD_hh:mm:ss"
+                     description="Model valid time"/>
+
+                <var name="u" type="real" dimensions="nVertLevels nEdges Time" units="m s^{-1}"
+                     description="Horizontal normal velocity at edges"/>
+
+                <var name="w" type="real" dimensions="nVertLevelsP1 nCells Time" units="m s^{-1}"
+                     description="Vertical velocity at vertical cell faces"/>
+
+                <var name="rho_zz" type="real" dimensions="nVertLevels nCells Time" units="kg m^{-3}"
+                     description="Dry air density divided by d(zeta)/dz"/>
+
+                <var name="theta_m" type="real" dimensions="nVertLevels nCells Time" units="K"
+                     description="Moist potential temperature: theta*(1+q_v*R_v/R_d)"/>
+
+                <var_array name="scalars" type="real" dimensions="nVertLevels nCells Time">
+                        <var name="qv" array_group="moist" units="kg kg^{-1}"
+                             description="Water vapor mixing ratio"/>
+
+                        <var name="tke_sgs" array_group="les_sgs" units="m^2 s^{-2}"
+                             description="Initial subgrid turbulent kinetic energy for LES"/>
+
+                        <var name="qc" array_group="moist" units="kg kg^{-1}"
+                             description="Cloud water mixing ratio"/>
+
+                        <var name="qr" array_group="moist" units="kg kg^{-1}"
+                             description="Rain water mixing ratio"/>
+                </var_array>
+
+
+                <var_array name="chem" type="real" dimensions="nVertLevels nCells Time">
+                        <var name=     "co2"   array_group="gas" units="ppm"        description="carbon dioxide concentration in the air"/>
+                        <var name=     "no"    array_group="gas" units="ppm"        description="nitric oxide concentration in the air"/>
+                        <var name=     "no2"   array_group="gas" units="ppm"        description="nitrogen dioxide concentration in the air"/>
+                        <var name=     "so2"   array_group="gas" units="ppm"        description="sulfur dioxide concentration in the air"/>
+                        <var name=     "nh3"   array_group="gas" units="ppm"        description="ammonia concentration in the air"/>
+                        <var name=     "co"    array_group="gas" units="ppm"        description="carbon oxide concentration in the air"/>
+                        <var name=     "o3"    array_group="gas" units="ppm"        description="ozone concentration in the air"/>
+                        <var name=     "h2o2"    array_group="gas" units="ppm"      description="h2o2 concentration in the air"/>
+                        <var name=     "no3"    array_group="gas" units="ppm"       description="no3 concentration in the air"/>
+                        <var name=     "n2o5"    array_group="gas" units="ppm"      description="n2o5 concentration in the air"/>
+                        <var name=     "hono"    array_group="gas" units="ppm"      description="hono concentration in the air"/>
+                        <var name=     "hno3"    array_group="gas" units="ppm"      description="hno3 concentration in the air"/>
+                        <var name=     "hno4"    array_group="gas" units="ppm"      description="hno4 concentration in the air"/>
+                        <var name=     "h2so4"    array_group="gas" units="ppm"     description="h2so4 concentration in the air"/>
+                        <var name=     "hcho"    array_group="gas" units="ppm"      description="hcho concentration in the air"/>
+                        <var name=     "ccho"    array_group="gas" units="ppm"      description="ccho concentration in the air"/>
+                        <var name=     "rcho"    array_group="gas" units="ppm"      description="rcho concentration in the air"/>
+                        <var name=     "acet"    array_group="gas" units="ppm"      description="acet concentration in the air"/>
+                        <var name=     "mek"    array_group="gas" units="ppm"       description="mek concentration in the air"/>
+                        <var name=     "hcooh"    array_group="gas" units="ppm"     description="hcooh concentration in the air"/>
+                        <var name=     "meoh"    array_group="gas" units="ppm"      description="meoh concentration in the air"/>
+                        <var name=     "etoh"    array_group="gas" units="ppm"      description="etoh concentration in the air"/>
+                        <var name=     "cco_oh"    array_group="gas" units="ppm"    description="cco_oh concentration in the air"/>
+                        <var name=     "rco_oh"    array_group="gas" units="ppm"    description="rco_oh concentration in the air"/>
+                        <var name=     "gly"    array_group="gas" units="ppm"       description="gly concentration in the air"/>
+                        <var name=     "mgly"    array_group="gas" units="ppm"      description="mgly concentration in the air"/>
+                        <var name=     "bacl"    array_group="gas" units="ppm"      description="bacl concentration in the air"/>
+                        <var name=     "cres"    array_group="gas" units="ppm"      description="cres concentration in the air"/>
+                        <var name=     "bald"    array_group="gas" units="ppm"      description="bald concentration in the air"/>
+                        <var name=     "isoprod"    array_group="gas" units="ppm"   description="isoprod concentration in the air"/>
+                        <var name=     "methacro"    array_group="gas" units="ppm"  description="methacro concentration in the air"/>
+                        <var name=     "mvk"    array_group="gas" units="ppm"       description="mvk concentration in the air"/>
+                        <var name=     "prod2"    array_group="gas" units="ppm"     description="prod2 concentration in the air"/>
+                        <var name=     "dcb1"    array_group="gas" units="ppm"      description="dcb1 concentration in the air"/>
+                        <var name=     "dcb2"    array_group="gas" units="ppm"      description="dcb2 concentration in the air"/>
+                        <var name=     "dcb3"    array_group="gas" units="ppm"      description="dcb3 concentration in the air"/>
+                        <var name=     "ethene"    array_group="gas" units="ppm"    description="ethene concentration in the air"/>
+                        <var name=     "isoprene"    array_group="gas" units="ppm"  description="isoprene concentration in the air"/>
+                        <var name=     "c2h6"    array_group="gas" units="ppm"      description="c2h6 concentration in the air"/>
+                        <var name=     "c3h8"    array_group="gas" units="ppm"      description="c3h8 concentration in the air"/>
+                        <var name=     "c2h2"    array_group="gas" units="ppm"      description="c2h2 concentration in the air"/>
+                        <var name=     "c3h6"    array_group="gas" units="ppm"      description="c3h6 concentration in the air"/>
+                        <var name=     "alk1"    array_group="gas" units="ppm"      description="alk1 concentration in the air"/>
+                        <var name=     "alk2"    array_group="gas" units="ppm"      description="alk2 concentration in the air"/>
+                        <var name=     "alk3"    array_group="gas" units="ppm"      description="alk3 concentration in the air"/>
+                        <var name=     "alk4"    array_group="gas" units="ppm"      description="alk4 concentration in the air"/>
+                        <var name=     "alk5"    array_group="gas" units="ppm"      description="alk5 concentration in the air"/>
+                        <var name=     "aro1"    array_group="gas" units="ppm"      description="aro1 concentration in the air"/>
+                        <var name=     "aro2"    array_group="gas" units="ppm"      description="aro2 concentration in the air"/>
+                        <var name=     "ole1"    array_group="gas" units="ppm"      description="ole1 concentration in the air"/>
+                        <var name=     "ole2"    array_group="gas" units="ppm"      description="ole2 concentration in the air"/>
+                        <var name=     "terp"    array_group="gas" units="ppm"      description="terp concentration in the air"/>
+                        <var name=     "rno3"    array_group="gas" units="ppm"      description="rno3 concentration in the air"/>
+                        <var name=     "nphe"    array_group="gas" units="ppm"      description="nphe concentration in the air"/>
+                        <var name=     "phen"    array_group="gas" units="ppm"      description="phen concentration in the air"/>
+                        <var name=     "pan"    array_group="gas" units="ppm"       description="pan concentration in the air"/>
+                        <var name=     "pan2"    array_group="gas" units="ppm"      description="pan2 concentration in the air"/>
+                        <var name=     "pbzn"    array_group="gas" units="ppm"      description="pbzn concentration in the air"/>
+                        <var name=     "ma_pan"    array_group="gas" units="ppm"    description="ma_pan concentration in the air"/>
+                        <var name=     "cco_ooh"    array_group="gas" units="ppm"   description="cco_ooh concentration in the air"/>
+                        <var name=     "rco_o2"    array_group="gas" units="ppm"    description="rco_o2 concentration in the air"/>
+                        <var name=     "rco_ooh"    array_group="gas" units="ppm"   description="rco_ooh concentration in the air"/>
+                        <var name=     "xn"    array_group="gas" units="ppm"        description="xn concentration in the air"/>
+                        <var name=     "xc"    array_group="gas" units="ppm"        description="xc concentration in the air"/>
+                        <var name=     "ho"    array_group="gas" units="ppm"        description="ho concentration in the air"/>
+                        <var name=     "ho2"    array_group="gas" units="ppm"       description="ho2 concentration in the air"/>
+                        <var name=     "c_o2"    array_group="gas" units="ppm"      description="c_o2 concentration in the air"/>
+                        <var name=     "cooh"    array_group="gas" units="ppm"      description="cooh concentration in the air"/>
+                        <var name=     "rooh"    array_group="gas" units="ppm"      description="rooh concentration in the air"/>
+                        <var name=     "ro2_r"    array_group="gas" units="ppm"     description="ro2_r concentration in the air"/>
+                        <var name=     "r2o2"    array_group="gas" units="ppm"      description="r2o2 concentration in the air"/>
+                        <var name=     "ro2_n"    array_group="gas" units="ppm"     description="ro2_n concentration in the air"/>
+                        <var name=     "cco_o2"    array_group="gas" units="ppm"    description="cco_o2 concentration in the air"/>
+                        <var name=     "bzco_o2"    array_group="gas" units="ppm"   description="bzco_o2 concentration in the air"/>
+                        <var name=     "ma_rco3"    array_group="gas" units="ppm"   description="ma_rco3 concentration in the air"/>
+                        <var name=     "sesq"    array_group="gas" units="ppm"      description="sesq concentration in the air"/>
+                        <var name=     "ch4"    array_group="gas" units="ppm"       description="ch4 concentration in the air"/>
+                        <var name=     "hcl"    array_group="gas" units="ppm"       description="hcl concentration in the air"/>
+                        <var name=     "msa"    array_group="gas" units="ppm"       description="msa concentration in the air"/>
+                        <var name=    "oc_a01" array_group="species" units="ug kg^{-1}"  description="oc mixing ratio"/>
+                        <var name=    "bc_a01" array_group="species" units="ug kg^{-1}"  description="BC mixing ratio"/>
+                        <var name=    "so4_a01" array_group="species" units="ug kg^{-1}" description="SO4 mixing ratio"/>
+                        <var name=    "nh4_a01" array_group="species" units="ug kg^{-1}" description="NH4 mixing ratio"/>
+                        <var name=    "cl_a01"  array_group="species" units="ug kg^{-1}" description="Chloride mixing ratio"/>
+                        <var name=    "na_a01"  array_group="species" units="ug kg^{-1}" description="Sodium mixing ratio"/>
+                        <var name=    "co3_a01" array_group="species" units="ug kg^{-1}" description="Carbonate mixing ratio"/>
+                        <var name=    "ca_a01"  array_group="species" units="ug kg^{-1}"  description="Calcium mixing ratio"/>
+                        <var name=    "msa_a01" array_group="species" units="ug kg^{-1}" description="MSA mixing ratio"/>
+                        <var name=    "no3_a01" array_group="species" units="ug kg^{-1}" description="NO3 mixing ratio"/>
+                        <var name=    "oin_a01" array_group="species" units="ug kg^{-1}" description="OIN mixing ratio"/>
+                        <var name=  "dust_a01" array_group="species" units="ug kg^{-1}"  description="dust mixing ratio"/> 
+                        <var name=  "hysw_a01" array_group="species" units="ug kg^{-1}"  description="hysw mixing ratio"/>
+                        <var name= "water_a01" array_group="species" units="ug kg^{-1}"  description="water mixing ratio"/> 
+                        <var name=   "num_a01" array_group="species" units="kg^{-1}"     description="num mixing ratio"/>
+                        <var name=    "oc_a02" array_group="species" units="ug kg^{-1}"  description="oc mixing ratio"/>
+                        <var name=    "bc_a02" array_group="species" units="ug kg^{-1}"  description="BC mixing ratio"/>
+                        <var name=    "so4_a02" array_group="species" units="ug kg^{-1}" description="SO4 mixing ratio"/>
+                        <var name=    "nh4_a02" array_group="species" units="ug kg^{-1}" description="NH4 mixing ratio"/>
+                        <var name=    "cl_a02"  array_group="species" units="ug kg^{-1}" description="Chloride mixing ratio"/>
+                        <var name=    "na_a02"  array_group="species" units="ug kg^{-1}" description="Sodium mixing ratio"/>
+                        <var name=    "co3_a02" array_group="species" units="ug kg^{-1}" description="Carbonate mixing ratio"/>
+                        <var name=    "ca_a02"  array_group="species" units="ug kg^{-1}"  description="Calcium mixing ratio"/>
+                        <var name=    "msa_a02" array_group="species" units="ug kg^{-1}" description="MSA mixing ratio"/>
+                        <var name=    "no3_a02" array_group="species" units="ug kg^{-1}" description="NO3 mixing ratio"/>
+                        <var name=    "oin_a02" array_group="species" units="ug kg^{-1}" description="OIN mixing ratio"/>
+                        <var name=  "dust_a02" array_group="species" units="ug kg^{-1}"  description="dust mixing ratio"/> 
+                        <var name=  "hysw_a02" array_group="species" units="ug kg^{-1}"  description="hysw mixing ratio"/>
+                        <var name= "water_a02" array_group="species" units="ug kg^{-1}"  description="water mixing ratio"/> 
+                        <var name=   "num_a02" array_group="species" units="kg^{-1}"     description="num mixing ratio"/>
+                        <var name=    "oc_a03" array_group="species" units="ug kg^{-1}"  description="oc mixing ratio"/>
+                        <var name=    "bc_a03" array_group="species" units="ug kg^{-1}"  description="BC mixing ratio"/>
+                        <var name=    "so4_a03" array_group="species" units="ug kg^{-1}" description="SO4 mixing ratio"/>
+                        <var name=    "nh4_a03" array_group="species" units="ug kg^{-1}" description="NH4 mixing ratio"/>
+                        <var name=    "cl_a03"  array_group="species" units="ug kg^{-1}" description="Chloride mixing ratio"/>
+                        <var name=    "na_a03"  array_group="species" units="ug kg^{-1}" description="Sodium mixing ratio"/>
+                        <var name=    "co3_a03" array_group="species" units="ug kg^{-1}" description="Carbonate mixing ratio"/>
+                        <var name=    "ca_a03"  array_group="species" units="ug kg^{-1}"  description="Calcium mixing ratio"/>
+                        <var name=    "msa_a03" array_group="species" units="ug kg^{-1}" description="MSA mixing ratio"/>
+                        <var name=    "no3_a03" array_group="species" units="ug kg^{-1}" description="NO3 mixing ratio"/>
+                        <var name=    "oin_a03" array_group="species" units="ug kg^{-1}" description="OIN mixing ratio"/>
+                        <var name=  "dust_a03" array_group="species" units="ug kg^{-1}"  description="dust mixing ratio"/>
+                        <var name=  "hysw_a03" array_group="species" units="ug kg^{-1}"  description="hysw mixing ratio"/>
+                        <var name= "water_a03" array_group="species" units="ug kg^{-1}"  description="water mixing ratio"/>
+                        <var name=   "num_a03" array_group="species" units="kg^{-1}"     description="num mixing ratio"/>
+                        <var name=    "oc_a04" array_group="species" units="ug kg^{-1}"  description="oc mixing ratio"/>
+                        <var name=    "bc_a04" array_group="species" units="ug kg^{-1}"  description="BC mixing ratio"/>
+                        <var name=    "so4_a04" array_group="species" units="ug kg^{-1}" description="SO4 mixing ratio"/>
+                        <var name=    "nh4_a04" array_group="species" units="ug kg^{-1}" description="NH4 mixing ratio"/>
+                        <var name=    "cl_a04"  array_group="species" units="ug kg^{-1}" description="Chloride mixing ratio"/>
+                        <var name=    "na_a04"  array_group="species" units="ug kg^{-1}" description="Sodium mixing ratio"/>
+                        <var name=    "co3_a04" array_group="species" units="ug kg^{-1}" description="Carbonate mixing ratio"/>
+                        <var name=    "ca_a04"  array_group="species" units="ug kg^{-1}"  description="Calcium mixing ratio"/>
+                        <var name=    "msa_a04" array_group="species" units="ug kg^{-1}" description="MSA mixing ratio"/>
+                        <var name=    "no3_a04" array_group="species" units="ug kg^{-1}" description="NO3 mixing ratio"/>
+                        <var name=    "oin_a04" array_group="species" units="ug kg^{-1}" description="OIN mixing ratio"/>
+                        <var name=  "dust_a04" array_group="species" units="ug kg^{-1}"  description="dust mixing ratio"/>
+                        <var name=  "hysw_a04" array_group="species" units="ug kg^{-1}"  description="hysw mixing ratio"/>
+                        <var name= "water_a04" array_group="species" units="ug kg^{-1}"  description="water mixing ratio"/>
+                        <var name=   "num_a04" array_group="species" units="kg^{-1}"     description="num mixing ratio"/>
+                        <var name=    "cl_a05"  array_group="species" units="ug kg^{-1}" description="Chloride mixing ratio"/>
+                        <var name=    "na_a05"  array_group="species" units="ug kg^{-1}" description="Sodium mixing ratio"/>
+                        <var name=  "dust_a05" array_group="species" units="ug kg^{-1}"  description="dust mixing ratio"/>
+                        <var name= "water_a05" array_group="species" units="ug kg^{-1}"  description="water mixing ratio"/>
+                        <var name=   "num_a05" array_group="species" units="kg^{-1}"     description="num mixing ratio"/>
+                        <var name=    "cl_a06"  array_group="species" units="ug kg^{-1}" description="Chloride mixing ratio"/>
+                        <var name=    "na_a06"  array_group="species" units="ug kg^{-1}" description="Sodium mixing ratio"/>
+                        <var name=  "dust_a06" array_group="species" units="ug kg^{-1}"  description="dust mixing ratio"/>
+                        <var name= "water_a06" array_group="species" units="ug kg^{-1}"  description="water mixing ratio"/>
+                        <var name=   "num_a06" array_group="species" units="kg^{-1}"     description="num mixing ratio"/>
+                        <var name=    "cl_a07"  array_group="species" units="ug kg^{-1}" description="Chloride mixing ratio"/>
+                        <var name=    "na_a07"  array_group="species" units="ug kg^{-1}" description="Sodium mixing ratio"/>
+                        <var name=  "dust_a07" array_group="species" units="ug kg^{-1}"  description="dust mixing ratio"/>
+                        <var name= "water_a07" array_group="species" units="ug kg^{-1}"  description="water mixing ratio"/>
+                        <var name=   "num_a07" array_group="species" units="kg^{-1}"     description="num mixing ratio"/>
+                        <var name=    "cl_a08"  array_group="species" units="ug kg^{-1}" description="Chloride mixing ratio"/>
+                        <var name=    "na_a08"  array_group="species" units="ug kg^{-1}" description="Sodium mixing ratio"/>
+                        <var name=  "dust_a08" array_group="species" units="ug kg^{-1}"  description="dust mixing ratio"/>
+                        <var name= "water_a08" array_group="species" units="ug kg^{-1}"  description="water mixing ratio"/>
+                        <var name=   "num_a08" array_group="species" units="kg^{-1}"     description="num mixing ratio"/>
+                        <var name=    "cl_a09"  array_group="species" units="ug kg^{-1}" description="Chloride mixing ratio"/>
+                        <var name=    "na_a09"  array_group="species" units="ug kg^{-1}" description="Sodium mixing ratio"/>
+                        <var name=  "dust_a09" array_group="species" units="ug kg^{-1}"  description="dust mixing ratio"/>
+                        <var name= "water_a09" array_group="species" units="ug kg^{-1}"  description="water mixing ratio"/>
+                        <var name=   "num_a09" array_group="species" units="kg^{-1}"     description="num mixing ratio"/>
+                        <var name=    "cl_a10"  array_group="species" units="ug kg^{-1}" description="Chloride mixing ratio"/>
+                        <var name=    "na_a10"  array_group="species" units="ug kg^{-1}" description="Sodium mixing ratio"/>
+                        <var name=  "dust_a10" array_group="species" units="ug kg^{-1}"  description="dust mixing ratio"/>
+                        <var name= "water_a10" array_group="species" units="ug kg^{-1}"  description="water mixing ratio"/>
+                        <var name=   "num_a10" array_group="species" units="kg^{-1}"     description="num mixing ratio"/>
+                        <var name=    "oc_cw01" array_group="species" units="ug kg^{-1}" description="oc mixing ratio"/>
+                        <var name=    "bc_cw01" array_group="species" units="ug kg^{-1}" description="BC mixing ratio"/>
+                        <var name=    "so4_cw01" array_group="species" units="ug kg^{-1}" description="SO4 mixing ratio"/>
+                        <var name=    "nh4_cw01" array_group="species" units="ug kg^{-1}" description="NH4 mixing ratio"/>
+                        <var name=    "cl_cw01"  array_group="species" units="ug kg^{-1}" description="Chloride mixing ratio"/>
+                        <var name=    "na_cw01"  array_group="species" units="ug kg^{-1}" description="Sodium mixing ratio"/>
+                        <var name=    "co3_cw01" array_group="species" units="ug kg^{-1}" description="Carbonate mixing ratio"/>
+                        <var name=    "ca_cw01"  array_group="species" units="ug kg^{-1}" description="Calcium mixing ratio"/>
+                        <var name=    "msa_cw01" array_group="species" units="ug kg^{-1}" description="MSA mixing ratio"/>
+                        <var name=    "no3_cw01" array_group="species" units="ug kg^{-1}" description="NO3 mixing ratio"/>
+                        <var name=    "oin_cw01" array_group="species" units="ug kg^{-1}" description="OIN mixing ratio"/>
+                        <var name=  "dust_cw01" array_group="species" units="ug kg^{-1}"  description="dust mixing ratio"/> 
+                        <var name=   "num_cw01" array_group="species" units="ug kg^{-1}"  description="num mixing ratio"/>
+                        <var name=    "oc_cw02" array_group="species" units="ug kg^{-1}"  description="oc mixing ratio"/>
+                        <var name=    "bc_cw02" array_group="species" units="ug kg^{-1}"  description="BC mixing ratio"/>
+                        <var name=    "so4_cw02" array_group="species" units="ug kg^{-1}" description="SO4 mixing ratio"/>
+                        <var name=    "nh4_cw02" array_group="species" units="ug kg^{-1}" description="NH4 mixing ratio"/>
+                        <var name=    "cl_cw02"  array_group="species" units="ug kg^{-1}" description="Chloride mixing ratio"/>
+                        <var name=    "na_cw02"  array_group="species" units="ug kg^{-1}" description="Sodium mixing ratio"/>
+                        <var name=    "co3_cw02" array_group="species" units="ug kg^{-1}" description="Carbonate mixing ratio"/>
+                        <var name=    "ca_cw02"  array_group="species" units="ug kg^{-1}" description="Calcium mixing ratio"/>
+                        <var name=    "msa_cw02" array_group="species" units="ug kg^{-1}" description="MSA mixing ratio"/>
+                        <var name=    "no3_cw02" array_group="species" units="ug kg^{-1}" description="NO3 mixing ratio"/>
+                        <var name=    "oin_cw02" array_group="species" units="ug kg^{-1}" description="OIN mixing ratio"/>
+                        <var name=  "dust_cw02" array_group="species" units="ug kg^{-1}"  description="dust mixing ratio"/> 
+                        <var name=   "num_cw02" array_group="species" units="ug kg^{-1}"  description="num mixing ratio"/>
+                        <var name=    "oc_cw03" array_group="species" units="ug kg^{-1}"  description="oc mixing ratio"/>
+                        <var name=    "bc_cw03" array_group="species" units="ug kg^{-1}"  description="BC mixing ratio"/>
+                        <var name=    "so4_cw03" array_group="species" units="ug kg^{-1}" description="SO4 mixing ratio"/>
+                        <var name=    "nh4_cw03" array_group="species" units="ug kg^{-1}" description="NH4 mixing ratio"/>
+                        <var name=    "cl_cw03"  array_group="species" units="ug kg^{-1}" description="Chloride mixing ratio"/>
+                        <var name=    "na_cw03"  array_group="species" units="ug kg^{-1}" description="Sodium mixing ratio"/>
+                        <var name=    "co3_cw03" array_group="species" units="ug kg^{-1}" description="Carbonate mixing ratio"/>
+                        <var name=    "ca_cw03"  array_group="species" units="ug kg^{-1}" description="Calcium mixing ratio"/>
+                        <var name=    "msa_cw03" array_group="species" units="ug kg^{-1}" description="MSA mixing ratio"/>
+                        <var name=    "no3_cw03" array_group="species" units="ug kg^{-1}" description="NO3 mixing ratio"/>
+                        <var name=    "oin_cw03" array_group="species" units="ug kg^{-1}" description="OIN mixing ratio"/>
+                        <var name=  "dust_cw03" array_group="species" units="ug kg^{-1}"  description="dust mixing ratio"/> 
+                        <var name=   "num_cw03" array_group="species" units="ug kg^{-1}"  description="num mixing ratio"/>
+                        <var name=    "oc_cw04" array_group="species" units="ug kg^{-1}"  description="oc mixing ratio"/>
+                        <var name=    "bc_cw04" array_group="species" units="ug kg^{-1}"  description="BC mixing ratio"/>
+                        <var name=    "so4_cw04" array_group="species" units="ug kg^{-1}" description="SO4 mixing ratio"/>
+                        <var name=    "nh4_cw04" array_group="species" units="ug kg^{-1}" description="NH4 mixing ratio"/>
+                        <var name=    "cl_cw04"  array_group="species" units="ug kg^{-1}" description="Chloride mixing ratio"/>
+                        <var name=    "na_cw04"  array_group="species" units="ug kg^{-1}" description="Sodium mixing ratio"/>
+                        <var name=    "co3_cw04" array_group="species" units="ug kg^{-1}" description="Carbonate mixing ratio"/>
+                        <var name=    "ca_cw04"  array_group="species" units="ug kg^{-1}" description="Calcium mixing ratio"/>
+                        <var name=    "msa_cw04" array_group="species" units="ug kg^{-1}" description="MSA mixing ratio"/>
+                        <var name=    "no3_cw04" array_group="species" units="ug kg^{-1}" description="NO3 mixing ratio"/>
+                        <var name=    "oin_cw04" array_group="species" units="ug kg^{-1}" description="OIN mixing ratio"/>
+                        <var name=  "dust_cw04" array_group="species" units="ug kg^{-1}"  description="dust mixing ratio"/>
+                        <var name=   "num_cw04" array_group="species" units="ug kg^{-1}"  description="num mixing ratio"/>
+                        <var name=    "cl_cw05"  array_group="species" units="ug kg^{-1}" description="Chloride mixing ratio"/>
+                        <var name=    "na_cw05"  array_group="species" units="ug kg^{-1}" description="Sodium mixing ratio"/>
+                        <var name=  "dust_cw05" array_group="species" units="ug kg^{-1}"  description="dust mixing ratio"/>
+                        <var name=   "num_cw05" array_group="species" units="ug kg^{-1}"  description="num mixing ratio"/>
+                        <var name=    "cl_cw06"  array_group="species" units="ug kg^{-1}" description="Chloride mixing ratio"/>
+                        <var name=    "na_cw06"  array_group="species" units="ug kg^{-1}" description="Sodium mixing ratio"/>
+                        <var name=  "dust_cw06" array_group="species" units="ug kg^{-1}"  description="dust mixing ratio"/>
+                        <var name=   "num_cw06" array_group="species" units="ug kg^{-1}"  description="num mixing ratio"/>
+                        <var name=    "cl_cw07"  array_group="species" units="ug kg^{-1}" description="Chloride mixing ratio"/>
+                        <var name=    "na_cw07"  array_group="species" units="ug kg^{-1}" description="Sodium mixing ratio"/>
+                        <var name=  "dust_cw07" array_group="species" units="ug kg^{-1}"  description="dust mixing ratio"/>
+                        <var name=   "num_cw07" array_group="species" units="ug kg^{-1}"  description="num mixing ratio"/>
+                        <var name=    "cl_cw08"  array_group="species" units="ug kg^{-1}" description="Chloride mixing ratio"/>
+                        <var name=    "na_cw08"  array_group="species" units="ug kg^{-1}" description="Sodium mixing ratio"/>
+                        <var name=  "dust_cw08" array_group="species" units="ug kg^{-1}"  description="dust mixing ratio"/>
+                        <var name=   "num_cw08" array_group="species" units="ug kg^{-1}"  description="num mixing ratio"/>
+                        <var name=    "cl_cw09"  array_group="species" units="ug kg^{-1}" description="Chloride mixing ratio"/>
+                        <var name=    "na_cw09"  array_group="species" units="ug kg^{-1}" description="Sodium mixing ratio"/>
+                        <var name=  "dust_cw09" array_group="species" units="ug kg^{-1}"  description="dust mixing ratio"/>
+                        <var name=   "num_cw09" array_group="species" units="ug kg^{-1}"  description="num mixing ratio"/>
+                        <var name=    "cl_cw10"  array_group="species" units="ug kg^{-1}" description="Chloride mixing ratio"/>
+                        <var name=    "na_cw10"  array_group="species" units="ug kg^{-1}" description="Sodium mixing ratio"/>
+                        <var name=  "dust_cw10" array_group="species" units="ug kg^{-1}"  description="dust mixing ratio"/>
+                        <var name=   "num_cw10" array_group="species" units="ug kg^{-1}"  description="num mixing ratio"/>
+                </var_array>
+
+                <!-- Climatology for ocean mixed-layer depth -->
+                <var name="h_oml_initial" type="real" dimensions="nCells Time" units="m"
+                     description="Initial depth of ocean mix layer"/>
+        </var_struct>
+
+        <var_struct name="lbc_state" time_levs="1">
+                <var name="lbc_u" type="real" dimensions="nVertLevels nEdges Time" packages="lbcs"
+                     units="m s^{-1}"
+                     description="Horizontal normal velocity on domain lateral boundary edges"/>
+
+                <var name="lbc_w" type="real" dimensions="nVertLevelsP1 nCells Time" packages="lbcs"
+                     units="m s^{-1}"
+                     description="Vertical velocity on domain lateral boundary vertical cell faces"/>
+
+                <var name="lbc_rho" type="real" dimensions="nVertLevels nCells Time" packages="lbcs"
+                     units="kg m^{-3}"
+                     description="Dry air density on lateral boundary cells"/>
+
+                <var name="lbc_theta" type="real" dimensions="nVertLevels nCells Time" packages="lbcs"
+                     units="K"
+                     description="Potential temperature on lateral boundary cells"/>
+
+                <var_array name="lbc_scalars" type="real" dimensions="nVertLevels nCells Time" packages="lbcs">
+                        <var name="lbc_qv" array_group="moist" units="kg kg^{-1}"
+                             description="Water vapor mixing ratio on lateral boundary cells"/>
+
+                        <var name="lbc_tke_sgs" array_group="les_sgs" units="m^2 s^{-2}"
+                             description="Subgrid turbulent kinetic energy on lateral boundary cells"/>
+
+                        <var name="lbc_qc" array_group="moist" units="kg kg^{-1}"
+                             description="Cloud water mixing ratio on lateral boundary cells"/>
+
+                        <var name="lbc_qr" array_group="moist" units="kg kg^{-1}"
+                             description="Rain water mixing ratio on lateral boundary cells"/>
+                </var_array>
+
+                <var_array name="lbc_chem" type="real" dimensions="nVertLevels nCells Time" packages="lbc_chemistry">
+                        
+                        <var name="lbc_co2"       array_group="lbc_chem"/>
+                        <var name="lbc_no"        array_group="lbc_chem"/>
+                        <var name="lbc_no2"       array_group="lbc_chem"/>
+                        <var name="lbc_so2"       array_group="lbc_chem"/>
+                        <var name="lbc_nh3"       array_group="lbc_chem"/>
+                        <var name="lbc_co"        array_group="lbc_chem"/>
+                        <var name="lbc_o3"        array_group="lbc_chem"/>
+                        <var name="lbc_h2o2"      array_group="lbc_chem"/>
+                        <var name="lbc_no3"       array_group="lbc_chem"/>
+                        <var name="lbc_n2o5"      array_group="lbc_chem"/>
+                        <var name="lbc_hono"      array_group="lbc_chem"/>
+                        <var name="lbc_hno3"      array_group="lbc_chem"/>
+                        <var name="lbc_hno4"      array_group="lbc_chem"/>
+                        <var name="lbc_h2so4"     array_group="lbc_chem"/>
+                        <var name="lbc_hcho"      array_group="lbc_chem"/>
+                        <var name="lbc_ccho"      array_group="lbc_chem"/>
+                        <var name="lbc_rcho"      array_group="lbc_chem"/>
+                        <var name="lbc_acet"      array_group="lbc_chem"/>
+                        <var name="lbc_mek"       array_group="lbc_chem"/>
+                        <var name="lbc_hcooh"     array_group="lbc_chem"/>
+                        <var name="lbc_meoh"      array_group="lbc_chem"/>
+                        <var name="lbc_etoh"      array_group="lbc_chem"/>
+                        <var name="lbc_cco_oh"    array_group="lbc_chem"/>
+                        <var name="lbc_rco_oh"    array_group="lbc_chem"/>
+                        <var name="lbc_gly"       array_group="lbc_chem"/>
+                        <var name="lbc_mgly"      array_group="lbc_chem"/>
+                        <var name="lbc_bacl"      array_group="lbc_chem"/>
+                        <var name="lbc_cres"      array_group="lbc_chem"/>
+                        <var name="lbc_bald"      array_group="lbc_chem"/>
+                        <var name="lbc_isoprod"   array_group="lbc_chem"/>
+                        <var name="lbc_methacro"  array_group="lbc_chem"/>
+                        <var name="lbc_mvk"       array_group="lbc_chem"/>
+                        <var name="lbc_prod2"     array_group="lbc_chem"/>
+                        <var name="lbc_dcb1"      array_group="lbc_chem"/>
+                        <var name="lbc_dcb2"      array_group="lbc_chem"/>
+                        <var name="lbc_dcb3"      array_group="lbc_chem"/>
+                        <var name="lbc_ethene"    array_group="lbc_chem"/>
+                        <var name="lbc_isoprene"  array_group="lbc_chem"/>
+                        <var name="lbc_c2h6"      array_group="lbc_chem"/>
+                        <var name="lbc_c3h8"      array_group="lbc_chem"/>
+                        <var name="lbc_c2h2"      array_group="lbc_chem"/>
+                        <var name="lbc_c3h6"      array_group="lbc_chem"/>
+                        <var name="lbc_alk1"      array_group="lbc_chem"/>
+                        <var name="lbc_alk2"      array_group="lbc_chem"/>
+                        <var name="lbc_alk3"      array_group="lbc_chem"/>
+                        <var name="lbc_alk4"      array_group="lbc_chem"/>
+                        <var name="lbc_alk5"      array_group="lbc_chem"/>
+                        <var name="lbc_aro1"      array_group="lbc_chem"/>
+                        <var name="lbc_aro2"      array_group="lbc_chem"/>
+                        <var name="lbc_ole1"      array_group="lbc_chem"/>
+                        <var name="lbc_ole2"      array_group="lbc_chem"/>
+                        <var name="lbc_terp"      array_group="lbc_chem"/>
+                        <var name="lbc_rno3"      array_group="lbc_chem"/>
+                        <var name="lbc_nphe"      array_group="lbc_chem"/>
+                        <var name="lbc_phen"      array_group="lbc_chem"/>
+                        <var name="lbc_pan"       array_group="lbc_chem"/>
+                        <var name="lbc_pan2"      array_group="lbc_chem"/>
+                        <var name="lbc_pbzn"      array_group="lbc_chem"/>
+                        <var name="lbc_ma_pan"    array_group="lbc_chem"/>
+                        <var name="lbc_cco_ooh"   array_group="lbc_chem"/>
+                        <var name="lbc_rco_o2"    array_group="lbc_chem"/>
+                        <var name="lbc_rco_ooh"   array_group="lbc_chem"/>
+                        <var name="lbc_xn"        array_group="lbc_chem"/>
+                        <var name="lbc_xc"        array_group="lbc_chem"/>
+                        <var name="lbc_ho"        array_group="lbc_chem"/>
+                        <var name="lbc_ho2"       array_group="lbc_chem"/>
+                        <var name="lbc_c_o2"      array_group="lbc_chem"/>
+                        <var name="lbc_cooh"      array_group="lbc_chem"/>
+                        <var name="lbc_rooh"      array_group="lbc_chem"/>
+                        <var name="lbc_ro2_r"     array_group="lbc_chem"/>
+                        <var name="lbc_r2o2"      array_group="lbc_chem"/>
+                        <var name="lbc_ro2_n"     array_group="lbc_chem"/>
+                        <var name="lbc_cco_o2"    array_group="lbc_chem"/>
+                        <var name="lbc_bzco_o2"   array_group="lbc_chem"/>
+                        <var name="lbc_ma_rco3"   array_group="lbc_chem"/>
+                        <var name="lbc_sesq"      array_group="lbc_chem"/>
+                        <var name="lbc_ch4"       array_group="lbc_chem"/>
+                        <var name="lbc_hcl"       array_group="lbc_chem"/>
+                        <var name="lbc_msa"       array_group="lbc_chem"/>
+
+                        <var name="lbc_oc_a01"    array_group="lbc_chem"/> <var name="lbc_bc_a01"    array_group="lbc_chem"/> <var name="lbc_so4_a01"   array_group="lbc_chem"/> 
+                        <var name="lbc_nh4_a01"   array_group="lbc_chem"/> <var name="lbc_cl_a01"    array_group="lbc_chem"/> <var name="lbc_na_a01"    array_group="lbc_chem"/> <var name="lbc_co3_a01"   array_group="lbc_chem"/> 
+                        <var name="lbc_ca_a01"    array_group="lbc_chem"/> <var name="lbc_msa_a01"   array_group="lbc_chem"/> <var name="lbc_no3_a01"   array_group="lbc_chem"/> <var name="lbc_oin_a01"   array_group="lbc_chem"/> 
+                        <var name="lbc_dust_a01"  array_group="lbc_chem"/> <var name="lbc_soa_a01"   array_group="lbc_chem"/> <var name="lbc_hysw_a01"  array_group="lbc_chem"/> <var name="lbc_water_a01" array_group="lbc_chem"/> <var name="lbc_num_a01"   array_group="lbc_chem"/>
+
+                        <var name="lbc_oc_a02"    array_group="lbc_chem"/> <var name="lbc_bc_a02"    array_group="lbc_chem"/> <var name="lbc_so4_a02"   array_group="lbc_chem"/> 
+                        <var name="lbc_nh4_a02"   array_group="lbc_chem"/> <var name="lbc_cl_a02"    array_group="lbc_chem"/> <var name="lbc_na_a02"    array_group="lbc_chem"/> <var name="lbc_co3_a02"   array_group="lbc_chem"/> 
+                        <var name="lbc_ca_a02"    array_group="lbc_chem"/> <var name="lbc_msa_a02"   array_group="lbc_chem"/> <var name="lbc_no3_a02"   array_group="lbc_chem"/> <var name="lbc_oin_a02"   array_group="lbc_chem"/> 
+                        <var name="lbc_dust_a02"  array_group="lbc_chem"/> <var name="lbc_soa_a02"   array_group="lbc_chem"/> <var name="lbc_hysw_a02"  array_group="lbc_chem"/> <var name="lbc_water_a02" array_group="lbc_chem"/> <var name="lbc_num_a02"   array_group="lbc_chem"/>
+
+                        <var name="lbc_oc_a03"    array_group="lbc_chem"/> <var name="lbc_bc_a03"    array_group="lbc_chem"/> <var name="lbc_so4_a03"   array_group="lbc_chem"/> 
+                        <var name="lbc_nh4_a03"   array_group="lbc_chem"/> <var name="lbc_cl_a03"    array_group="lbc_chem"/> <var name="lbc_na_a03"    array_group="lbc_chem"/> <var name="lbc_co3_a03"   array_group="lbc_chem"/> 
+                        <var name="lbc_ca_a03"    array_group="lbc_chem"/> <var name="lbc_msa_a03"   array_group="lbc_chem"/> <var name="lbc_no3_a03"   array_group="lbc_chem"/> <var name="lbc_oin_a03"   array_group="lbc_chem"/> 
+                        <var name="lbc_dust_a03"  array_group="lbc_chem"/> <var name="lbc_soa_a03"   array_group="lbc_chem"/> <var name="lbc_hysw_a03"  array_group="lbc_chem"/> <var name="lbc_water_a03" array_group="lbc_chem"/> <var name="lbc_num_a03"   array_group="lbc_chem"/>
+
+                        <var name="lbc_oc_a04"    array_group="lbc_chem"/> <var name="lbc_bc_a04"    array_group="lbc_chem"/> <var name="lbc_so4_a04"   array_group="lbc_chem"/> 
+                        <var name="lbc_nh4_a04"   array_group="lbc_chem"/> <var name="lbc_cl_a04"    array_group="lbc_chem"/> <var name="lbc_na_a04"    array_group="lbc_chem"/> <var name="lbc_co3_a04"   array_group="lbc_chem"/> 
+                        <var name="lbc_ca_a04"    array_group="lbc_chem"/> <var name="lbc_msa_a04"   array_group="lbc_chem"/> <var name="lbc_no3_a04"   array_group="lbc_chem"/> <var name="lbc_oin_a04"   array_group="lbc_chem"/> 
+                        <var name="lbc_dust_a04"  array_group="lbc_chem"/> <var name="lbc_soa_a04"   array_group="lbc_chem"/> <var name="lbc_hysw_a04"  array_group="lbc_chem"/> <var name="lbc_water_a04" array_group="lbc_chem"/> <var name="lbc_num_a04"   array_group="lbc_chem"/>
+
+                        <var name="lbc_oc_cw01"   array_group="lbc_chem"/> <var name="lbc_bc_cw01"   array_group="lbc_chem"/> <var name="lbc_so4_cw01"  array_group="lbc_chem"/> 
+                        <var name="lbc_nh4_cw01"  array_group="lbc_chem"/> <var name="lbc_cl_cw01"   array_group="lbc_chem"/> <var name="lbc_na_cw01"   array_group="lbc_chem"/> <var name="lbc_co3_cw01"  array_group="lbc_chem"/> 
+                        <var name="lbc_ca_cw01"   array_group="lbc_chem"/> <var name="lbc_msa_cw01"  array_group="lbc_chem"/> <var name="lbc_no3_cw01"  array_group="lbc_chem"/> <var name="lbc_oin_cw01"  array_group="lbc_chem"/> 
+                        <var name="lbc_dust_cw01" array_group="lbc_chem"/> <var name="lbc_soa_cw01"  array_group="lbc_chem"/> <var name="lbc_num_cw01"  array_group="lbc_chem"/>
+
+                        <var name="lbc_oc_cw02"   array_group="lbc_chem"/> <var name="lbc_bc_cw02"   array_group="lbc_chem"/> <var name="lbc_so4_cw02"  array_group="lbc_chem"/> 
+                        <var name="lbc_nh4_cw02"  array_group="lbc_chem"/> <var name="lbc_cl_cw02"   array_group="lbc_chem"/> <var name="lbc_na_cw02"   array_group="lbc_chem"/> <var name="lbc_co3_cw02"  array_group="lbc_chem"/> 
+                        <var name="lbc_ca_cw02"   array_group="lbc_chem"/> <var name="lbc_msa_cw02"  array_group="lbc_chem"/> <var name="lbc_no3_cw02"  array_group="lbc_chem"/> <var name="lbc_oin_cw02"  array_group="lbc_chem"/> 
+                        <var name="lbc_dust_cw02" array_group="lbc_chem"/> <var name="lbc_soa_cw02"  array_group="lbc_chem"/> <var name="lbc_num_cw02"  array_group="lbc_chem"/>
+
+                        <var name="lbc_oc_cw03"   array_group="lbc_chem"/> <var name="lbc_bc_cw03"   array_group="lbc_chem"/> <var name="lbc_so4_cw03"  array_group="lbc_chem"/> 
+                        <var name="lbc_nh4_cw03"  array_group="lbc_chem"/> <var name="lbc_cl_cw03"   array_group="lbc_chem"/> <var name="lbc_na_cw03"   array_group="lbc_chem"/> <var name="lbc_co3_cw03"  array_group="lbc_chem"/> 
+                        <var name="lbc_ca_cw03"   array_group="lbc_chem"/> <var name="lbc_msa_cw03"  array_group="lbc_chem"/> <var name="lbc_no3_cw03"  array_group="lbc_chem"/> <var name="lbc_oin_cw03"  array_group="lbc_chem"/> 
+                        <var name="lbc_dust_cw03" array_group="lbc_chem"/> <var name="lbc_soa_cw03"  array_group="lbc_chem"/> <var name="lbc_num_cw03"  array_group="lbc_chem"/>
+
+                        <var name="lbc_oc_cw04"   array_group="lbc_chem"/> <var name="lbc_bc_cw04"   array_group="lbc_chem"/> <var name="lbc_so4_cw04"  array_group="lbc_chem"/> 
+                        <var name="lbc_nh4_cw04"  array_group="lbc_chem"/> <var name="lbc_cl_cw04"   array_group="lbc_chem"/> <var name="lbc_na_cw04"   array_group="lbc_chem"/> <var name="lbc_co3_cw04"  array_group="lbc_chem"/> 
+                        <var name="lbc_ca_cw04"   array_group="lbc_chem"/> <var name="lbc_msa_cw04"  array_group="lbc_chem"/> <var name="lbc_no3_cw04"  array_group="lbc_chem"/> <var name="lbc_oin_cw04"  array_group="lbc_chem"/> 
+                        <var name="lbc_dust_cw04" array_group="lbc_chem"/> <var name="lbc_soa_cw04"  array_group="lbc_chem"/> <var name="lbc_num_cw04"  array_group="lbc_chem"/>
+                </var_array>
+
+        </var_struct>
+
+        <!-- zhxia add this var_struct for emission update. 0415/2025--> 
+        <var_struct name="emis_state" time_levs="1">
+                <!-- primary -->
+                <var name="e_co2" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="co2 anthropogenic emissions"/>
+
+                <var name="e_nh3" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="nh3 anthropogenic emissions"/>
+
+                <var name="e_co" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="co anthropogenic emissions"/>
+
+                <var name="e_no" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="no anthropogenic emissions"/>
+
+                <var name="e_no2" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="no2 anthropogenic emissions"/>
+
+                <var name="e_so2" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="so2 anthropogenic emissions"/>
+
+                <var name="e_bc" type="real" dimensions="nCells Time" packages="emis_update" units="ug m^-2 s^-1"
+                     description="bc anthropogenic emissions"/>
+
+                <var name="e_oc" type="real" dimensions="nCells Time" packages="emis_update" units="ug m^-2 s^-1"
+                     description="oc anthropogenic emissions"/>
+
+                <var name="e_pm25" type="real" dimensions="nCells Time" packages="emis_update" units="ug m^-2 s^-1"
+                     description="pm25 anthropogenic emissions"/>
+
+                <var name="e_pm10" type="real" dimensions="nCells Time" packages="emis_update" units="ug m^-2 s^-1"
+                     description="pm10 anthropogenic emissions"/>
+
+                <var name="e_so4" type="real" dimensions="nCells Time" packages="emis_update" units="ug m^-2 s^-1"
+                     description="so4 anthropogenic emissions"/>
+
+                <var name="e_no3" type="real" dimensions="nCells Time" packages="emis_update" units="ug m^-2 s^-1"
+                     description="no3 anthropogenic emissions"/>
+
+                <!-- vocs -->
+                <var name="e_c2h6" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="c2h6 anthropogenic emissions"/>
+
+                <var name="e_c3h8" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="c3h8 anthropogenic emissions"/>
+
+                <var name="e_c2h2" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="c2h2 anthropogenic emissions"/>
+
+                <var name="e_alk3" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="alk3 anthropogenic emissions"/>
+
+                <var name="e_alk4" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="alk4 anthropogenic emissions"/>
+
+                <var name="e_alk5" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="alk5 anthropogenic emissions"/>
+
+                <var name="e_ethene" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="ethene anthropogenic emissions"/>
+
+                <var name="e_c3h6" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="c3h6 anthropogenic emissions"/>
+
+                <var name="e_ole1" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="ole1 anthropogenic emissions"/>
+
+                <var name="e_ole2" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="ole2 anthropogenic emissions"/>
+
+                <var name="e_aro1" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="aro1 anthropogenic emissions"/>
+
+                <var name="e_aro2" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="aro2 anthropogenic emissions"/>
+
+                <var name="e_hcho" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="hcho anthropogenic emissions"/>
+
+                <var name="e_ccho" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="ccho anthropogenic emissions"/>
+
+                <var name="e_rcho" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="rcho anthropogenic emissions"/>
+
+                <var name="e_acet" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="acet anthropogenic emissions"/>
+
+                <var name="e_mek" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="mek anthropogenic emissions"/>
+
+                <var name="e_isoprene" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="isoprene anthropogenic emissions"/>
+
+                <var name="e_terp" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="terp anthropogenic emissions"/>
+
+                <var name="e_sesq" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="sesq anthropogenic emissions"/>
+
+                <var name="e_phen" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="phen anthropogenic emissions"/>
+
+                <var name="e_cres" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="cres anthropogenic emissions"/>
+
+                <var name="e_meoh" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="meoh anthropogenic emissions"/>
+
+                <var name="e_gly" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="gly anthropogenic emissions"/>
+
+                <var name="e_mgly" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="mgly anthropogenic emissions"/>
+
+                <var name="e_bacl" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="bacl anthropogenic emissions"/>
+
+                <var name="e_isoprod" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="isoprod anthropogenic emissions"/>
+
+                <var name="e_methacro" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="methacro anthropogenic emissions"/>
+
+                <var name="e_mvk" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="mvk anthropogenic emissions"/>
+
+                <var name="e_prod2" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="prod2 anthropogenic emissions"/>
+
+                <var name="e_ch4" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="ch4 anthropogenic emissions"/>
+
+                <var name="e_bald" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="bald anthropogenic emissions"/>
+
+                <var name="e_hcooh" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="hcooh anthropogenic emissions"/>
+
+                <var name="e_cco_oh" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="cco_oh anthropogenic emissions"/>
+
+                <var name="e_rco_oh" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="rco_oh anthropogenic emissions"/>
+
+                <!-- biomass -->
+                <var name="ebu_bc" type="real" dimensions="nCells Time" packages="emis_update" units="ug m^-2 s^-1"
+                     description="bc biomass burning emissions"/>
+
+                <var name="ebu_oc" type="real" dimensions="nCells Time" packages="emis_update" units="ug m^-2 s^-1"
+                     description="oc biomass burning emissions"/>
+
+                <var name="ebu_pm25" type="real" dimensions="nCells Time" packages="emis_update" units="ug m^-2 s^-1"
+                     description="pm25 biomass burning emissions"/>
+
+                <var name="ebu_pm10" type="real" dimensions="nCells Time" packages="emis_update" units="ug m^-2 s^-1"
+                     description="pm10 biomass burning emissions"/>
+
+                <var name="ebu_ch4" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="ch4 biomass burning emissions"/>
+              
+                <var name="ebu_co2" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="co2 biomass burning emissions"/>
+
+                <var name="ebu_co" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="co biomass burning emissions"/>
+
+                <var name="ebu_no" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="no biomass burning emissions"/>
+
+                <var name="ebu_no2" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="no2 biomass burning emissions"/>
+
+                <var name="ebu_so2" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="so2 biomass burning emissions"/>
+
+                <var name="ebu_acet" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="acet biomass burning emissions"/>
+
+                <var name="ebu_alk3" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="alk3 biomass burning emissions"/>
+
+                <var name="ebu_alk4" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="alk4 biomass burning emissions"/>
+
+                <var name="ebu_alk5" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="alk5 biomass burning emissions"/>
+
+                <var name="ebu_aro1" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="aro1 biomass burning emissions"/>
+              
+                <var name="ebu_aro2" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="aro2 biomass burning emissions"/>
+
+                <var name="ebu_bald" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="bald biomass burning emissions"/>
+
+                <var name="ebu_ccho" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="ccho biomass burning emissions"/>
+
+                <var name="ebu_c2o2h" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="cco_oh biomass burning emissions"/>
+
+                <var name="ebu_ethen" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="ethene biomass burning emissions"/>
+
+                <var name="ebu_hcho" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="hcho biomass burning emissions"/>
+
+                <var name="ebu_hcooh" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="hcooh biomass burning emissions"/>
+
+                <var name="ebu_hono" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="hono biomass burning emissions"/>
+
+                <var name="ebu_isopr" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="isoprene biomass burning emissions"/>
+
+                <var name="ebu_mek" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="mek biomass burning emissions"/>
+              
+                <var name="ebu_meoh" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="meoh biomass burning emissions"/>
+
+                <var name="ebu_metha" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="methacro biomass burning emissions"/>
+
+                <var name="ebu_mgly" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="mgly biomass burning emissions"/>
+
+                <var name="ebu_mvk" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="mvk biomass burning emissions"/>
+
+                <var name="ebu_ole1" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="ole1 biomass burning emissions"/>
+
+                <var name="ebu_ole2" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="ole2 biomass burning emissions"/>
+
+                <var name="ebu_phen" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="phen biomass burning emissions"/>
+
+                <var name="ebu_prod2" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="prod2 biomass burning emissions"/>
+
+                <var name="ebu_rcho" type="real" dimensions="nCells Time" packages="emis_update" units="mol km^-2 hr^-1"
+                     description="rcho biomass burning emissions"/>
+        </var_struct>
+
+
+        <var_struct name="fg" time_levs="1">
+
+                <!-- horizontally interpolated from first-guess data -->
+                <var name="u_fg" name_in_code="u" type="real" dimensions="nFGLevels nEdges Time" units="m s^{-1}"
+                     description="First guess zonal wind component"/>
+
+                <var name="v_fg" name_in_code="v" type="real" dimensions="nFGLevels nEdges Time" units="m s^{-1}"
+                     description="First guess merdian wind component"/>
+
+                <var name="t_fg" name_in_code="t" type="real" dimensions="nFGLevels nCells Time" units="K"
+                     description="First guess temperature"/>
+
+                <var name="p_fg" name_in_code="p" type="real" dimensions="nFGLevels nCells Time" units="Pa"
+                     description="First guess pressure"/>
+
+                <var name="z_fg" name_in_code="z" type="real" dimensions="nFGLevels nCells Time" units="m"
+                     description="First guess geopotential height"/>
+
+                <var name="rh_fg" name_in_code="rh" type="real" dimensions="nFGLevels nCells Time" units="percent"
+                     description="First guess relative humidity with respect to liquid water"/>
+
+                <var name="sh_fg" name_in_code="sh" type="real" dimensions="nFGLevels nCells Time" units="kg kg^{-1}"
+                     description="First guess specific humidity"/>
+
+                <var name="soilz_fg" name_in_code="soilz" type="real" dimensions="nCells Time" units="m"
+                     description="First guess soil height"/>
+
+                <var name="psfc_fg" name_in_code="psfc" type="real" dimensions="nCells Time" units="Pa"
+                     description="First guess surface pressure"/>
+
+                <var name="pmsl_fg" name_in_code="pmsl" type="real" dimensions="nCells Time" units="Pa"
+                     description="First guess mean sea level pressure"/>
+
+                <var name="dz_fg" type="real" dimensions="nFGSoilLevels nCells Time" units="cm"
+                     description="First guess depth of soil layer bottom"/>
+
+                <var name="dzs_fg" type="real" dimensions="nFGSoilLevels nCells Time" units="cm"
+                     description="First guess soil layer thickness"/>
+
+                <var name="zs_fg" type="real" dimensions="nFGSoilLevels nCells Time" units="cm"
+                     description="First guess depth of centers of soil levels"/>
+
+                <var name="st_fg" type="real" dimensions="nFGSoilLevels nCells Time" units="k"
+                     description="First guess soil temperature"/>
+
+                <var name="sm_fg" type="real" dimensions="nFGSoilLevels nCells Time" units="m^{3} m^{-3}"
+                     description="First guess soil moisture"/>
+
+                <!-- horizontally interpolated from first-guess data, and should be read in by model -->
+                <var name="dz" type="real" dimensions="nSoilLevels nCells Time" units="m"
+                     description="depth of soil layer bottom"/>
+
+                <var name="dzs" type="real" dimensions="nSoilLevels nCells Time" units="m"
+                     description="soil layer thickness"/>
+
+                <var name="zs" type="real" dimensions="nSoilLevels nCells Time" units="m"
+                     description="depth of centers of soil layers"/>
+
+                <var name="sh2o" type="real" dimensions="nSoilLevels nCells Time" units="m3 m^{-3}"
+                     description="soil equivalent liquid water "/>
+
+                <var name="smois" type="real" dimensions="nSoilLevels nCells Time" units="m3 m^{-3}"
+                     description="soil moisture"/>
+
+                <var name="tslb" type="real" dimensions="nSoilLevels nCells Time" units="K"
+                     description="soil layer temperature"/>
+
+                <var name="smcrel" type="real" dimensions="nSoilLevels nCells Time" units="m3 m^{-3}"
+                     description="soil moisture threshold below which transpiration begins to stress"/>
+
+                <var name="tmn" type="real" dimensions="nCells Time" units="K"
+                     description="deep soil temperature"/>
+
+                <var name="skintemp" type="real" dimensions="nCells Time" units="K"
+                     description="ground or water surface temperature"/>
+
+                <var name="sst" type="real" dimensions="nCells Time" units="K"
+                     description="sea-surface temperature"/>
+
+                <var name="snow" type="real" dimensions="nCells Time" units="kg m^{-2}"
+                     description="snow water equivalent"/>
+
+                <var name="snowc" type="real" dimensions="nCells Time" units="unitless"
+                     description="flag for snow on ground (=0 no snow; =1,otherwise"/>
+
+                <var name="snowh" type="real" dimensions="nCells Time" units="m"
+                     description="physical snow depth"/>
+
+                <var name="xice" type="real" dimensions="nCells Time" units="unitless"
+                     description="fractional area coverage of sea-ice"/>
+
+                <var name="seaice" type="real" dimensions="nCells Time" units="unitless"
+                     description="sea-ice flag (0=no seaice; =1 otherwise)"/>
+
+                <var name="gfs_z" type="real" dimensions="nVertLevels nCells Time" units="m"
+                     description="geopotential height vertically interpolated from first guess"/>
+
+                <var name="vegfra" type="real" dimensions="nCells Time" units="unitless"
+                     description="vegetation fraction"/>
+
+                <var name="sfc_albbck" type="real" dimensions="nCells Time" units="unitless"
+                     description="background surface albedo"/>
+
+                <var name="xland" type="real" dimensions="nCells Time" units="unitless"
+                     description="land-ocean mask (1=land including sea-ice ; 2=ocean)"/>
+
+                <var name="erod"  type="real"     dimensions="THREE nCells Time" units="unitless"
+                     description="desert erodibility for dust emission" />
+
+                <var name="dms_0" type="real"     dimensions="nCells Time" units="unitless" 
+                     description="source function for DMS emission" />
+
+                <!-- qkyang added to support anthropogenic heating emissions((: -->
+                <var name="AH_emis" type="real"     dimensions="nCells Time" units="w m-2" 
+                     description="source function for anthropogenic heating emission" /> 
+                <!-- qkyang added to support anthropogenic heating emissions)): -->
+
+                <!-- diagnostic fields that we get from first-guess data, and which we want to have at model initial output time -->
+                <var name="u10" type="real" dimensions="nCells Time" units="m s^{-1}"
+                     description="10-meter zonal wind"/>
+
+                <var name="v10" type="real" dimensions="nCells Time" units="m s^{-1}"
+                     description="10-meter meridional wind"/>
+
+                <var name="q2" type="real" dimensions="nCells Time" units="kg kg^{-1}"
+                     description="2-meter specific humidity"/>
+
+                <var name="rh2" type="real" dimensions="nCells Time" units="percent"
+                     description="2-meter relative humidity"/>
+
+                <var name="t2m" type="real" dimensions="nCells Time" units="K"
+                     description="2-meter temperature"/>
+
+
+                <!-- Using chemistry simulation results from wrfchem as initial values in iamas. zhxia@lacar. 06/2025 -->
+                <var name=     "co2_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"        description="First guess carbon dioxide concentration in the air"/>
+                <var name=     "no_fg"    type="real" dimensions="nFGGasLevels nCells Time" units="ppm"        description="First guess nitric oxide concentration in the air"/>
+                <var name=     "no2_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"        description="First guess nitrogen dioxide concentration in the air"/>
+                <var name=     "so2_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"        description="First guess sulfur dioxide concentration in the air"/>
+                <var name=     "co_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"        description="First guess carbon oxide concentration in the air"/>
+                <var name=     "o3_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"        description="First guess ozone concentration in the air"/>
+                <var name=     "h2o2_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"      description="First guess h2o2 concentration in the air"/>
+                <var name=     "no3_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"       description="First guess no3 concentration in the air"/>
+                <var name=     "n2o5_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"      description="First guess n2o5 concentration in the air"/>
+                <var name=     "hono_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"      description="First guess hono concentration in the air"/>
+                <var name=     "hno3_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"      description="First guess hno3 concentration in the air"/>
+                <var name=     "hno4_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"      description="First guess hno4 concentration in the air"/>
+                <var name=     "h2so4_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"     description="First guess h2so4 concentration in the air"/>
+                <var name=     "hcho_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"      description="First guess hcho concentration in the air"/>
+                <var name=     "ccho_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"      description="First guess ccho concentration in the air"/>
+                <var name=     "rcho_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"      description="First guess rcho concentration in the air"/>
+                <var name=     "acet_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"      description="First guess acet concentration in the air"/>
+                <var name=     "mek_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"       description="First guess mek concentration in the air"/>
+                <var name=     "hcooh_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"     description="First guess hcooh concentration in the air"/>
+                <var name=     "meoh_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"      description="First guess meoh concentration in the air"/>
+                <var name=     "etoh_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"      description="First guess etoh concentration in the air"/>
+                <var name=     "cco_oh_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"    description="First guess cco_oh concentration in the air"/>
+                <var name=     "rco_oh_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"    description="First guess rco_oh concentration in the air"/>
+                <var name=     "gly_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"       description="First guess gly concentration in the air"/>
+                <var name=     "mgly_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"      description="First guess mgly concentration in the air"/>
+                <var name=     "bacl_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"      description="First guess bacl concentration in the air"/>
+                <var name=     "cres_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"      description="First guess cres concentration in the air"/>
+                <var name=     "bald_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"      description="First guess bald concentration in the air"/>
+                <var name=     "isoprod_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"   description="First guess isoprod concentration in the air"/>
+                <var name=     "methacro_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"  description="First guess methacro concentration in the air"/>
+                <var name=     "mvk_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"       description="First guess mvk concentration in the air"/>
+                <var name=     "prod2_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"     description="First guess prod2 concentration in the air"/>
+                <var name=     "dcb1_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"      description="First guess dcb1 concentration in the air"/>
+                <var name=     "dcb2_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"      description="First guess dcb2 concentration in the air"/>
+                <var name=     "dcb3_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"      description="First guess dcb3 concentration in the air"/>
+                <var name=     "ethene_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"    description="First guess ethene concentration in the air"/>
+                <var name=     "isoprene_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"  description="First guess isoprene concentration in the air"/>
+                <var name=     "c2h6_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"      description="First guess c2h6 concentration in the air"/>
+                <var name=     "c3h8_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"      description="First guess c3h8 concentration in the air"/>
+                <var name=     "c2h2_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"      description="First guess c2h2 concentration in the air"/>
+                <var name=     "c3h6_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"      description="First guess c3h6 concentration in the air"/>
+                <var name=     "alk3_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"      description="First guess alk3 concentration in the air"/>
+                <var name=     "alk4_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"      description="First guess alk4 concentration in the air"/>
+                <var name=     "alk5_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"      description="First guess alk5 concentration in the air"/>
+                <var name=     "aro1_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"      description="First guess aro1 concentration in the air"/>
+                <var name=     "aro2_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"      description="First guess aro2 concentration in the air"/>
+                <var name=     "ole1_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"      description="First guess ole1 concentration in the air"/>
+                <var name=     "ole2_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"      description="First guess ole2 concentration in the air"/>
+                <var name=     "terp_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"      description="First guess terp concentration in the air"/>
+                <var name=     "rno3_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"      description="First guess rno3 concentration in the air"/>
+                <var name=     "nphe_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"      description="First guess nphe concentration in the air"/>
+                <var name=     "phen_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"      description="First guess phen concentration in the air"/>
+                <var name=     "pan_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"       description="First guess pan concentration in the air"/>
+                <var name=     "pan2_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"      description="First guess pan2 concentration in the air"/>
+                <var name=     "pbzn_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"      description="First guess pbzn concentration in the air"/>
+                <var name=     "ma_pan_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"    description="First guess ma_pan concentration in the air"/>
+                <var name=     "cco_ooh_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"   description="First guess cco_ooh concentration in the air"/>
+                <var name=     "rco_o2_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"    description="First guess rco_o2 concentration in the air"/>
+                <var name=     "rco_ooh_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"   description="First guess rco_ooh concentration in the air"/>
+                <var name=     "xn_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"        description="First guess xn concentration in the air"/>
+                <var name=     "xc_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"        description="First guess xc concentration in the air"/>
+                <var name=     "ho_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"        description="First guess ho concentration in the air"/>
+                <var name=     "ho2_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"       description="First guess ho2 concentration in the air"/>
+                <var name=     "c_o2_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"      description="First guess c_o2 concentration in the air"/>
+                <var name=     "cooh_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"      description="First guess cooh concentration in the air"/>
+                <var name=     "rooh_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"      description="First guess rooh concentration in the air"/>
+                <var name=     "ro2_r_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"     description="First guess ro2_r concentration in the air"/>
+                <var name=     "r2o2_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"      description="First guess r2o2 concentration in the air"/>
+                <var name=     "ro2_n_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"     description="First guess ro2_n concentration in the air"/>
+                <var name=     "cco_o2_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"    description="First guess cco_o2 concentration in the air"/>
+                <var name=     "bzco_o2_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"   description="First guess bzco_o2 concentration in the air"/>
+                <var name=     "ma_rco3_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"   description="First guess ma_rco3 concentration in the air"/>
+                <var name=     "sesq_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"      description="First guess sesq concentration in the air"/>
+                <var name=     "ch4_fg"   type="real" dimensions="nFGGasLevels nCells Time" units="ppm"       description="First guess ch4 concentration in the air"/>
+
+        </var_struct>
+
+        <var_struct name="diag" time_levs="1">
+                <var name="pressure_p" type="real" dimensions="nVertLevels nCells Time" units="Pa"
+                     description="Perturbation pressure"/>
+
+                <var name="phi_total" type="real" dimensions="nVertLevels nCells Time" units="unitless"
+                     description="phi=ln(p/p0)"/>
+
+                <var name="rho" type="real" dimensions="nVertLevels nCells Time" units="kg m^{-3}"
+                     description="Dry air density"/>
+
+                <var name="theta" type="real" dimensions="nVertLevels nCells Time" units="K"
+                     description="Potential temperature"/>
+
+                <var name="v" type="real" dimensions="nVertLevels nEdges Time" units="m s^{-1}"
+                     description="Horizontal tangential velocity at edges"/>
+
+                <var name="relhum" type="real" dimensions="nVertLevels nCells Time" units="percent"
+                     description="Relative humidity"/>
+
+                <var name="spechum" type="real" dimensions="nVertLevels nCells Time" units="kg kg^{-1}"
+                     description="Specific humidity"/>
+
+                <!-- reconstructed horizontal velocity vectors at cell centers -->
+                <var name="uReconstructX" type="real" dimensions="nVertLevels nCells Time" units="m s^{-1}"
+                     description="Cartesian x-component of reconstructed horizontal velocity at cell centers"/>
+
+                <var name="uReconstructY" type="real" dimensions="nVertLevels nCells Time" units="m s^{-1}"
+                     description="Cartesian y-component of reconstructed horizontal velocity at cell centers"/>
+
+                <var name="uReconstructZ" type="real" dimensions="nVertLevels nCells Time" units="m s^{-1}"
+                     description="Cartesian z-component of reconstructed horizontal velocity at cell centers"/>
+
+                <var name="uReconstructZonal" type="real" dimensions="nVertLevels nCells Time" units="m s^{-1}"
+                     description="Zonal component of reconstructed horizontal velocity at cell centers"/>
+
+                <var name="uReconstructMeridional" type="real" dimensions="nVertLevels nCells Time" units="m s^{-1}"
+                     description="Meridional component of reconstructed horizontal velocity at cell centers"/>
+
+                <var name="exner" type="real" dimensions="nVertLevels nCells Time" units="unitless"
+                     description="Exner function"/>
+
+                <var name="exner_base" type="real" dimensions="nVertLevels nCells Time" units="unitless"
+                     description="Base-state Exner function"/>
+
+                <var name="rtheta_base" type="real" dimensions="nVertLevels nCells Time" units="kg K m^{-3}"
+                     description="reference state rho*theta/zz"/>
+
+                <var name="pressure" type="real" dimensions="nVertLevels nCells Time" units="Pa"
+                     description="Pressure"/>
+
+                <var name="pressure_base" type="real" dimensions="nVertLevels nCells Time" units="Pa"
+                     description="Base state pressure"/>
+
+                <var name="phi_base" type="real" dimensions="nVertLevels nCells Time" units="unitless"
+                     description="Base state phi=ln(p/p0)"/>
+
+                <var name="rho_base" type="real" dimensions="nVertLevels nCells Time" units="kg m^{-3}"
+                     description="Base state dry air density"/>
+
+                <var name="theta_base" type="real" dimensions="nVertLevels nCells Time" units="K"
+                     description="Base state potential temperature"/>
+
+                <var name="cqw" type="real" dimensions="nVertLevels nCells Time" units="unitless"
+                     description="rho_d/rho_m at w points"/>
+
+                <var name="surface_pressure" type="real" dimensions="nCells Time" units="Pa"
+                     description="Diagnosed surface pressure"/>
+
+                <!-- coupled variables needed by the solver, but not output -->
+                <var name="ru" type="real" dimensions="nVertLevels nEdges Time" units="kg m^{-2} s^{-1}"
+                     description="horizontal momentum at cell edge (rho*u/zz)"/>
+
+                <var name="rw" type="real" dimensions="nVertLevelsP1 nCells Time" units="kg m^{-2} s^{-1}"
+                     description="rho*omega/zz carried at w points"/>
+
+                <var name="rtheta_p" type="real" dimensions="nVertLevels nCells Time" units="kg K m^{-3}"
+                     description="rho*theta_m/zz perturbation from the reference state value"/>
+
+                <var name="rho_p" type="real" dimensions="nVertLevels nCells Time" units="kg m^{-3}"
+                     description="rho/zz perturbation from the reference state value, advanced over acoustic steps"/>
+        </var_struct>
+
+        <var_struct name="diag_physics" time_levs="1">
+                <var name="precipw" type="real" dimensions="nCells Time" units="kg m^{-2}"
+                     description="precipitable water"/>
+        </var_struct>
+
+        <var_struct name="fdda" time_levs="1">
+                <var name="qv_fdda_new" type="real" dimensions="nVertLevels nCells Time" units="kg kg^{-1}"
+                     packages = "fdda_update" description="Water vapor mixing ratio for fdda"/>
+
+                <var name="u_fdda_new" type="real" dimensions="nVertLevels nCells Time" units="m s^{-1}"
+                     packages = "fdda_update" description="Zonal component of reconstructed horizontal velocity at cell centers for fdda"/>
+
+                <var name="v_fdda_new" type="real" dimensions="nVertLevels nCells Time" units="m s^{-1}"
+                     packages = "fdda_update" description="Meridional component of reconstructed horizontal velocity at cell centers for fdda"/>
+
+                <var name="th_fdda_new" type="real" dimensions="nVertLevels nCells Time" units="K"
+                     packages = "fdda_update" description="Potential temperature for fdda"/>
+        </var_struct>
+
+</registry>

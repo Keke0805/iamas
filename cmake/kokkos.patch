@@ -1,0 +1,13 @@
+diff --git a/cmake/kokkos_tribits.cmake b/cmake/kokkos_tribits.cmake
+index 9f8fd08..33d04af 100644
+--- a/cmake/kokkos_tribits.cmake
++++ b/cmake/kokkos_tribits.cmake
+@@ -328,7 +328,7 @@ function(KOKKOS_SET_LIBRARY_PROPERTIES LIBRARY_NAME)
+ 
+   if(KOKKOS_CXX_STANDARD_FEATURE)
+     #GREAT! I can do this the right way
+-    target_compile_features(${LIBRARY_NAME} PUBLIC ${KOKKOS_CXX_STANDARD_FEATURE})
++    # target_compile_features(${LIBRARY_NAME} PUBLIC ${KOKKOS_CXX_STANDARD_FEATURE})
+     if(NOT KOKKOS_USE_CXX_EXTENSIONS)
+       set_target_properties(${LIBRARY_NAME} PROPERTIES CXX_EXTENSIONS OFF)
+     endif()

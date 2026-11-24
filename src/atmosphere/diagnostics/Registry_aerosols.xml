@@ -1,0 +1,12 @@
+<!-- ******************************* -->
+<!-- Aerosols diagnostics            -->
+<!-- ******************************* -->
+<var_struct name="diag" time_levs="1">
+
+        <var name="dust_column" type="real" dimensions="nCells Time" units="kg m^{-2}"
+             description="Column density of dust with phase a"/>
+
+        <var name="seas_column" type="real" dimensions="nCells Time" units="kg m^{-2}"
+             description="Column density of seasalt with phase a"/>
+
+</var_struct>

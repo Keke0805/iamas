@@ -1,0 +1,548 @@
+!==================================================================================================
+ module iamas_atmphys_fdda
+    use iamas_kind_types
+    use iamas_derived_types
+    use iamas_pool_routines
+   
+    use iamas_atmphys_constants
+    use iamas_atmphys_utilities
+    use iamas_atmphys_vars
+   
+    implicit none
+    private
+    public:: apply_fdda
+   
+    integer, private:: i,k
+   
+   
+   !>\brief iAMAS grid nudging.
+   !>\author O. Russell Bullock Jr. (send comments to bullock.russell@epa.gov).
+   !>\date 2016-03-30.
+   !>
+   !>\details
+   !>
+   !> subroutines in iamas_atmphys_fdda:
+   !> ----------------------------------------------
+   !> apply_fdda      : main fdda subroutine (called from subroutine physics_driver).
+   !>
+   
+   !> add-ons and modifications to sourcecode:
+   !> ----------------------------------------
+   !>      Original sourcecode by O. Russell Bullock Jr. (bullock.russell@epa.gov) / 2016-03-30. 
+   !>
+   !>    * Added various controls for length-scaled FDDA application 
+   !>      O. Russell Bullock Jr. (bullock.russell@epa.gov) / 2016-08-11. 
+   !>    * Modified to only require reads of "fdda_new" data arrays.  "fdda_old" is initially 
+   !>      set to initial conditions.  At end of FDDA data interval, "fdda_old" is set to 
+   !>      "fdda_new" and updated "fdda_new" data comes from FDDA input stream.
+   !>      O. Russell Bullock Jr. (bullock.russell@epa.gov) / 2016-08-30.
+   
+    contains
+   
+   !==================================================================================================
+    subroutine apply_fdda(xtime_s,configs,mesh,state,time_lev,fdda,diag,diag_physics,tend_physics)
+   !==================================================================================================
+   
+   !input variables:
+    type(iamas_pool_type),intent(in):: configs
+    type(iamas_pool_type),intent(in):: mesh
+    type(iamas_pool_type),intent(in):: state
+    type(iamas_pool_type),intent(in):: fdda 
+    type(iamas_pool_type),intent(in):: diag
+    type(iamas_pool_type),intent(in):: diag_physics
+    integer,intent(in):: time_lev
+    real(kind=RKIND),intent(in):: xtime_s
+   
+   !inout variables:
+    type(iamas_pool_type),intent(inout):: tend_physics
+   
+   !local pointers:
+    integer,pointer:: index_qv,fdda_t_min_layer,fdda_q_min_layer,fdda_uv_min_layer
+    integer,dimension(:),pointer :: kpbl
+    real(kind=RKIND),pointer:: fdda_t_coef,fdda_q_coef,fdda_uv_coef
+    real(kind=RKIND),pointer:: fdda_int,fdda_scale_min,fdda_scale_max
+    real(kind=RKIND),pointer:: config_dt
+    real(kind=RKIND),dimension(:),pointer    :: dcEdge, dcEdge_m
+    real(kind=RKIND),dimension(:,:),pointer  :: rthfddaten,rqvfddaten
+    real(kind=RKIND),dimension(:,:),pointer  :: rufddaten,rvfddaten 
+    real(kind=RKIND),dimension(:,:),pointer  :: qv_fdda_old,th_fdda_old,u_fdda_old,v_fdda_old
+    real(kind=RKIND),dimension(:,:),pointer  :: qv_fdda_new,th_fdda_new,u_fdda_new,v_fdda_new
+    real(kind=RKIND),dimension(:,:),pointer  :: u,v
+    real(kind=RKIND),dimension(:,:),pointer  :: qv
+    real(kind=RKIND),dimension(:,:),pointer  :: theta_m
+    real(kind=RKIND),dimension(:,:,:),pointer:: scalars
+    logical,pointer:: fdda_t, fdda_t_in_pbl
+    logical,pointer:: fdda_q, fdda_q_in_pbl
+    logical,pointer:: fdda_uv,fdda_uv_in_pbl
+    logical,pointer:: config_do_restart
+
+    integer,pointer:: nCellsSolve !!
+
+    integer,dimension(:),pointer  :: nEdgesOnCell
+    integer,dimension(:,:),pointer:: edgesOnCell
+   
+   !local variables:
+    real(kind=RKIND)  :: tfrac
+    real(kind=RKIND)  :: t_target,q_target,u_target,v_target
+    real(kind=RKIND)  :: sfac
+    real(kind=RKIND)  :: theta_p
+    real(kind=RKIND)  :: srange
+   
+    integer :: i,k
+   
+    logical :: first_call = .true.
+    integer:: iCell,iEdge,nEdges_m
+
+    !! for sanity check
+    integer :: m_ONE, m_TWO, m_THREE
+    real :: san_sum, san_mean, san_min, san_max
+    integer :: san_count
+   
+   !local parameters:
+    real(kind=RKIND),parameter:: rvrd   = R_v/R_d
+   
+    ! call iamas_log_write('#### Entering apply_fdda', messageType=iAMAS_LOG_WARN)
+
+   !==================================================================================================
+    ! call iamas_log_write('--- enter apply_fdda:  at xtime_s = $r',realArgs=(/xtime_s/), messageType=iAMAS_LOG_WARN)
+   
+   
+    call iamas_pool_get_config(configs,'config_do_restart' ,config_do_restart )
+    ! call iamas_log_write('# config_do_restart = $l', logicArgs=(/config_do_restart/), messageType=iAMAS_LOG_WARN)
+    call iamas_pool_get_config(configs,'config_dt' ,config_dt )
+    ! call iamas_log_write('# config_dt = $r', realArgs=(/config_dt/), messageType=iAMAS_LOG_WARN)
+    call iamas_pool_get_config(configs,'config_fdda_int',fdda_int)
+    ! call iamas_log_write('# fdda_int = $r', realArgs=(/fdda_int/), messageType=iAMAS_LOG_WARN)
+    call iamas_pool_get_config(configs,'config_fdda_t',fdda_t)
+    call iamas_pool_get_config(configs,'config_fdda_q',fdda_q)
+    call iamas_pool_get_config(configs,'config_fdda_uv',fdda_uv)
+    ! call iamas_log_write('# fdda_t,q,uv = $l $l $l', logicArgs=(/fdda_t, fdda_q, fdda_uv/), messageType=iAMAS_LOG_WARN)
+    call iamas_pool_get_config(configs,'config_fdda_t_in_pbl',fdda_t_in_pbl)
+    call iamas_pool_get_config(configs,'config_fdda_q_in_pbl',fdda_q_in_pbl)
+    call iamas_pool_get_config(configs,'config_fdda_uv_in_pbl',fdda_uv_in_pbl)
+    call iamas_pool_get_config(configs,'config_fdda_t_min_layer',fdda_t_min_layer)
+    call iamas_pool_get_config(configs,'config_fdda_q_min_layer',fdda_q_min_layer)
+    call iamas_pool_get_config(configs,'config_fdda_uv_min_layer',fdda_uv_min_layer)
+    call iamas_pool_get_config(configs,'config_fdda_t_coef',fdda_t_coef)
+    call iamas_pool_get_config(configs,'config_fdda_q_coef',fdda_q_coef)
+    call iamas_pool_get_config(configs,'config_fdda_uv_coef',fdda_uv_coef)
+    call iamas_pool_get_config(configs,'config_fdda_scale_min',fdda_scale_min)
+    call iamas_pool_get_config(configs,'config_fdda_scale_max',fdda_scale_max)
+    ! call iamas_log_write('# fdda_scale_min, max = $r $r', realArgs=(/fdda_scale_min, fdda_scale_max/), messageType=iAMAS_LOG_WARN)
+
+   
+    call iamas_pool_get_array(fdda,'qv_fdda_old',qv_fdda_old)
+    call iamas_pool_get_array(fdda,'th_fdda_old',th_fdda_old)
+    call iamas_pool_get_array(fdda,'u_fdda_old', u_fdda_old )
+    call iamas_pool_get_array(fdda,'v_fdda_old', v_fdda_old )
+    call iamas_pool_get_array(fdda,'qv_fdda_new',qv_fdda_new)
+    call iamas_pool_get_array(fdda,'th_fdda_new',th_fdda_new)
+    call iamas_pool_get_array(fdda,'u_fdda_new', u_fdda_new )
+    call iamas_pool_get_array(fdda,'v_fdda_new', v_fdda_new )
+    call iamas_pool_get_array(tend_physics,'rthfddaten',rthfddaten)
+    call iamas_pool_get_array(tend_physics,'rqvfddaten',rqvfddaten)
+    call iamas_pool_get_array(tend_physics,'rufddaten' ,rufddaten )
+    call iamas_pool_get_array(tend_physics,'rvfddaten' ,rvfddaten )
+    call iamas_pool_get_array(mesh,'dcEdge',dcEdge) !! change to get dcEdge
+    call iamas_pool_get_array(mesh,'dcEdge_m',dcEdge_m) !! change to get dcEdge
+    call iamas_pool_get_array(diag_physics,'kpbl',kpbl)
+    call iamas_pool_get_array(diag,'uReconstructZonal'     ,u)
+    call iamas_pool_get_array(diag,'uReconstructMeridional',v)
+   
+    call iamas_pool_get_dimension(state,'index_qv',index_qv)
+    call iamas_pool_get_array(state,'scalars',scalars,time_lev)
+    qv => scalars(index_qv,:,:)
+    call iamas_pool_get_array(state,'theta_m',theta_m,time_lev)
+
+    call iamas_pool_get_dimension(mesh,'nCellsSolve',nCellsSolve) !! 
+    call iamas_pool_get_array(mesh,'nEdgesOnCell',nEdgesOnCell)
+    call iamas_pool_get_array(mesh,'edgesOnCell' ,edgesOnCell )
+   
+    !! calculate dcEdge_m
+    if(.not. config_do_restart) then
+      do iCell = 1, nCellsSolve
+         dcEdge_m(iCell) = 0._RKIND
+         nEdges_m = nEdgesOnCell(iCell)
+         do iEdge = 1, nEdges_m
+            dcEdge_m(iCell) = dcEdge_m(iCell) + dcEdge(edgesOnCell(iEdge,iCell))
+         enddo
+         dcEdge_m(iCell) = dcEdge_m(iCell) / nEdges_m
+  !      write(0,102) iCell,nEdges_m,(dcEdge(edgesOnCell(iEdge,iCell)),iEdge=1,nEdges_m),dcEdge_m(iCell)
+      enddo
+   endif
+   
+   !check to see if 'old' FDDA target values need to be defined from initial conditions
+    if(first_call .and. .not. config_do_restart) then
+      ! call iamas_log_write('## first call routine initiated', messageType=iAMAS_LOG_WARN)
+
+       qv_fdda_old = qv
+       th_fdda_old = theta_m / (1._RKIND + rvrd * qv)
+       u_fdda_old = u
+       v_fdda_old = v
+       first_call = .false.
+    endif
+   
+    !! init case counters
+    m_ONE = 0
+    m_TWO = 0
+    m_THREE = 0
+
+   !calculate time fraction within FDDA target data interval
+    tfrac = mod(xtime_s,fdda_int)/fdda_int
+    ! call iamas_log_write('### tfrac for current timestep is $r', realArgs=(/tfrac/), messageType=iAMAS_LOG_WARN)
+
+   
+    fdda_select: select case(fdda_scheme)
+   
+       case ("scaled")
+          ! call iamas_log_write('## running fdda scheme "scaled" ', messageType=iAMAS_LOG_WARN)
+          
+
+          srange = fdda_scale_max-fdda_scale_min
+   
+          DO i=its,ite
+   
+             if (dcEdge_m(i) .lt. fdda_scale_max) then
+                if (dcEdge_m(i) .lt. fdda_scale_min) then
+                   !! case 1
+                   sfac = 0.0
+                   m_ONE = m_ONE + 1
+                else
+                   !! case 2
+                   sfac = (dcEdge_m(i)-fdda_scale_min)/srange
+                   m_TWO = m_TWO + 1
+                endif
+             else
+                !! case 3
+                sfac = 1.0
+                m_THREE = m_THREE + 1 
+             endif
+   
+          DO k=kts,kte
+   
+             theta_p = theta_m(k,i) / (1._RKIND + rvrd * qv(k,i))
+   
+             if (fdda_t .and. k.gt.fdda_t_min_layer .and. (fdda_t_in_pbl .or. k.gt.kpbl(i))) then
+                t_target = (1.0-tfrac)*th_fdda_old(k,i)+tfrac*th_fdda_new(k,i)
+                rthfddaten(k,i) = fdda_t_coef * ( t_target - theta_p ) * sfac
+             else
+                rthfddaten(k,i) = 0.
+             endif
+   
+             if (fdda_q .and. k.gt.fdda_q_min_layer .and. (fdda_q_in_pbl .or. k.gt.kpbl(i))) then
+                q_target = (1.0-tfrac)*qv_fdda_old(k,i)+tfrac*qv_fdda_new(k,i)
+                rqvfddaten(k,i) = fdda_q_coef * ( q_target - qv(k,i) ) * sfac
+             else
+                rqvfddaten(k,i) = 0.
+             endif
+   
+             if (fdda_uv .and. k.gt.fdda_uv_min_layer .and. (fdda_uv_in_pbl .or. k.gt.kpbl(i))) then
+                u_target = (1.0-tfrac)*u_fdda_old(k,i)+tfrac*u_fdda_new(k,i)
+                rufddaten(k,i) = fdda_uv_coef * ( u_target - u(k,i) ) * sfac
+                v_target = (1.0-tfrac)*v_fdda_old(k,i)+tfrac*v_fdda_new(k,i)
+                rvfddaten(k,i) = fdda_uv_coef * ( v_target - v(k,i) ) * sfac
+             else
+                rufddaten(k,i) = 0.
+                rvfddaten(k,i) = 0.
+             endif
+   
+          ENDDO
+          ENDDO
+   
+       case("analysis")
+   
+          DO i=its,ite
+          DO k=kts,kte
+   
+             theta_p = theta_m(k,i) / (1._RKIND + rvrd * qv(k,i))
+   
+             if (fdda_t .and. k.gt.fdda_t_min_layer .and. (fdda_t_in_pbl .or. k.gt.kpbl(i))) then
+               ! call iamas_log_write('## nudging th ', messageType=iAMAS_LOG_WARN)
+                t_target = (1.0-tfrac)*th_fdda_old(k,i)+tfrac*th_fdda_new(k,i)
+                rthfddaten(k,i) = fdda_t_coef * ( t_target - theta_p )
+             else
+                rthfddaten(k,i) = 0.
+             endif
+   
+             if (fdda_q .and. k.gt.fdda_q_min_layer .and. (fdda_q_in_pbl .or. k.gt.kpbl(i))) then
+               ! call iamas_log_write('## nudging qv ', messageType=iAMAS_LOG_WARN)
+                q_target = (1.0-tfrac)*qv_fdda_old(k,i)+tfrac*qv_fdda_new(k,i)
+                rqvfddaten(k,i) = fdda_q_coef * ( q_target - qv(k,i) )
+             else
+                rqvfddaten(k,i) = 0.
+             endif
+   
+             if (fdda_uv .and. k.gt.fdda_uv_min_layer .and. (fdda_uv_in_pbl .or. k.gt.kpbl(i))) then
+               ! call iamas_log_write('## nudging uv ', messageType=iAMAS_LOG_WARN)
+                u_target = (1.0-tfrac)*u_fdda_old(k,i)+tfrac*u_fdda_new(k,i)
+                rufddaten(k,i) = fdda_uv_coef * ( u_target - u(k,i) )
+                v_target = (1.0-tfrac)*v_fdda_old(k,i)+tfrac*v_fdda_new(k,i)
+                rvfddaten(k,i) = fdda_uv_coef * ( v_target - v(k,i) )
+             else
+                rufddaten(k,i) = 0.
+                rvfddaten(k,i) = 0.
+             endif
+   
+          ENDDO
+          ENDDO
+   
+       case default
+   
+    end select fdda_select
+
+    !! check cases of dc_Edge_m
+   
+   !  call iamas_log_write('## dc_Edge_m cases 1,2,3: $i,$i,$i',intArgs=(/m_ONE, m_TWO, m_THREE/), messageType=iAMAS_LOG_WARN)
+
+    !! sanity check of whether calculated fields are rational
+
+    !!! 1. check rthfddaten
+   !  san_sum = 0.0
+   !  san_count = 0
+   !  DO i=its,ite
+   !    DO k=kts,kte
+   !       san_sum = san_sum + th_fdda_old(k,i)
+   !       san_count = san_count + 1
+   !    ENDDO
+   !  ENDDO
+   !  san_mean = san_sum / real(san_count)
+   !  call iamas_log_write('## mean th_fdda_old: $r',realArgs=(/san_mean/), messageType=iAMAS_LOG_WARN)
+   !  san_sum = 0.0
+   !  san_count = 0
+   !  DO i=its,ite
+   !    DO k=kts,kte
+   !       san_sum = san_sum + th_fdda_new(k,i)
+   !       san_count = san_count + 1
+   !    ENDDO
+   !  ENDDO
+   !  san_mean = san_sum / real(san_count)
+   !  call iamas_log_write('## mean th_fdda_new: $r',realArgs=(/san_mean/), messageType=iAMAS_LOG_WARN)
+
+    san_sum = 0.0
+    san_count = 0
+    DO i=its,ite
+      DO k=kts,kte
+         san_sum = san_sum + (theta_m(k,i) / (1._RKIND + rvrd * qv(k,i)))
+         san_count = san_count + 1
+      ENDDO
+    ENDDO
+    san_mean = san_sum / real(san_count)
+    ! call iamas_log_write('## mean th: $r',realArgs=(/san_mean/), messageType=iAMAS_LOG_WARN)    
+    
+    san_sum = 0.0
+    san_count = 0
+    DO i=its,ite
+      DO k=kts,kte
+         san_sum = san_sum + (1.0-tfrac)*th_fdda_old(k,i)+tfrac*th_fdda_new(k,i)
+         san_count = san_count + 1
+      ENDDO
+    ENDDO
+    san_mean = san_sum / real(san_count)
+    ! call iamas_log_write('## mean th_target: $r',realArgs=(/san_mean/), messageType=iAMAS_LOG_WARN)
+
+    san_sum = 0.0
+    san_count = 0
+    DO i=its,ite
+      DO k=kts,kte
+         san_sum = san_sum + rthfddaten(k,i)
+         san_count = san_count + 1
+      ENDDO
+    ENDDO
+    san_mean = san_sum / real(san_count)
+    ! call iamas_log_write('## mean rthfddaten: $r',realArgs=(/san_mean/), messageType=iAMAS_LOG_WARN)
+
+
+    !!! 2. check rqvfddaten
+   !  san_sum = 0.0
+   !  san_count = 0
+   !  DO i=its,ite
+   !    DO k=kts,kte
+   !       san_sum = san_sum + qv_fdda_old(k,i)
+   !       san_count = san_count + 1
+   !    ENDDO
+   !  ENDDO
+   !  san_mean = san_sum / real(san_count)
+   !  call iamas_log_write('## mean qv_fdda_old: $r',realArgs=(/san_mean/), messageType=iAMAS_LOG_WARN)    
+   !  san_sum = 0.0
+   !  san_count = 0
+   !  DO i=its,ite
+   !    DO k=kts,kte
+   !       san_sum = san_sum + qv_fdda_new(k,i)
+   !       san_count = san_count + 1
+   !    ENDDO
+   !  ENDDO
+   !  san_mean = san_sum / real(san_count)
+   !  call iamas_log_write('## mean qv_fdda_new: $r',realArgs=(/san_mean/), messageType=iAMAS_LOG_WARN)
+
+    san_sum = 0.0
+    san_count = 0
+    DO i=its,ite
+      DO k=kts,kte
+         san_sum = san_sum + qv(k,i)
+         san_count = san_count + 1
+      ENDDO
+    ENDDO
+    san_mean = san_sum / real(san_count)
+    ! call iamas_log_write('## mean qv: $r',realArgs=(/san_mean/), messageType=iAMAS_LOG_WARN)    
+    
+    san_sum = 0.0
+    san_count = 0
+    DO i=its,ite
+      DO k=kts,kte
+         san_sum = san_sum + (1.0-tfrac)*qv_fdda_old(k,i)+tfrac*qv_fdda_new(k,i)
+         san_count = san_count + 1
+      ENDDO
+    ENDDO
+    san_mean = san_sum / real(san_count)
+    ! call iamas_log_write('## mean qv_target: $r',realArgs=(/san_mean/), messageType=iAMAS_LOG_WARN)
+
+    san_sum = 0.0
+    san_count = 0
+    DO i=its,ite
+      DO k=kts,kte
+         san_sum = san_sum + rqvfddaten(k,i)
+         san_count = san_count + 1
+      ENDDO
+    ENDDO
+    san_mean = san_sum / real(san_count)
+    ! call iamas_log_write('## mean rqvfddaten: $r',realArgs=(/san_mean/), messageType=iAMAS_LOG_WARN)
+
+
+    
+    !!! 3. check rufddaten
+   !  san_sum = 0.0
+   !  san_count = 0
+   !  DO i=its,ite
+   !    DO k=kts,kte
+   !       san_sum = san_sum + u_fdda_old(k,i)
+   !       san_count = san_count + 1
+   !    ENDDO
+   !  ENDDO
+   !  san_mean = san_sum / real(san_count)
+    ! call iamas_log_write('## mean u_fdda_old: $r',realArgs=(/san_mean/), messageType=iAMAS_LOG_WARN)
+
+   !  san_sum = 0.0
+   !  san_count = 0
+   !  DO i=its,ite
+   !    DO k=kts,kte
+   !       san_sum = san_sum + u_fdda_new(k,i)
+   !       san_count = san_count + 1
+   !    ENDDO
+   !  ENDDO
+   !  san_mean = san_sum / real(san_count)
+   !  call iamas_log_write('## mean u_fdda_new: $r',realArgs=(/san_mean/), messageType=iAMAS_LOG_WARN)
+
+    san_sum = 0.0
+    san_count = 0
+    DO i=its,ite
+      DO k=kts,kte
+         san_sum = san_sum + u(k,i)
+         san_count = san_count + 1
+      ENDDO
+    ENDDO
+    san_mean = san_sum / real(san_count)
+    ! call iamas_log_write('## mean u: $r',realArgs=(/san_mean/), messageType=iAMAS_LOG_WARN)
+
+    san_sum = 0.0
+    san_count = 0
+    DO i=its,ite
+      DO k=kts,kte
+         san_sum = san_sum + (1.0-tfrac)*u_fdda_old(k,i)+tfrac*u_fdda_new(k,i)
+         san_count = san_count + 1
+      ENDDO
+    ENDDO
+    san_mean = san_sum / real(san_count)
+    ! call iamas_log_write('## mean u_target: $r',realArgs=(/san_mean/), messageType=iAMAS_LOG_WARN)
+
+    san_sum = 0.0
+    san_count = 0
+    DO i=its,ite
+      DO k=kts,kte
+         san_sum = san_sum + rufddaten(k,i)
+         san_count = san_count + 1
+      ENDDO
+    ENDDO
+    san_mean = san_sum / real(san_count)
+    ! call iamas_log_write('## mean rufddaten: $r',realArgs=(/san_mean/), messageType=iAMAS_LOG_WARN)
+
+
+
+
+    !!! 4. check rvfddaten
+   !  san_sum = 0.0
+   !  san_count = 0
+   !  DO i=its,ite
+   !    DO k=kts,kte
+   !       san_sum = san_sum + v_fdda_old(k,i)
+   !       san_count = san_count + 1
+   !    ENDDO
+   !  ENDDO
+   !  san_mean = san_sum / real(san_count)
+    ! call iamas_log_write('## mean v_fdda_old: $r',realArgs=(/san_mean/), messageType=iAMAS_LOG_WARN)
+
+   !  san_sum = 0.0
+   !  san_count = 0
+   !  DO i=its,ite
+   !    DO k=kts,kte
+   !       san_sum = san_sum + v_fdda_new(k,i)
+   !       san_count = san_count + 1
+   !    ENDDO
+   !  ENDDO
+   !  san_mean = san_sum / real(san_count)
+   !  call iamas_log_write('## mean v_fdda_new: $r',realArgs=(/san_mean/), messageType=iAMAS_LOG_WARN)
+
+    san_sum = 0.0
+    san_count = 0
+    DO i=its,ite
+      DO k=kts,kte
+         san_sum = san_sum + v(k,i)
+         san_count = san_count + 1
+      ENDDO
+    ENDDO
+    san_mean = san_sum / real(san_count)
+    ! call iamas_log_write('## mean v: $r',realArgs=(/san_mean/), messageType=iAMAS_LOG_WARN)
+
+    san_sum = 0.0
+    san_count = 0
+    DO i=its,ite
+      DO k=kts,kte
+         san_sum = san_sum + (1.0-tfrac)*v_fdda_old(k,i)+tfrac*v_fdda_new(k,i)
+         san_count = san_count + 1
+      ENDDO
+    ENDDO
+    san_mean = san_sum / real(san_count)
+    ! call iamas_log_write('## mean v_target: $r',realArgs=(/san_mean/), messageType=iAMAS_LOG_WARN)
+
+    san_sum = 0.0
+    san_count = 0
+    DO i=its,ite
+      DO k=kts,kte
+         san_sum = san_sum + rvfddaten(k,i)
+         san_count = san_count + 1
+      ENDDO
+    ENDDO
+    san_mean = san_sum / real(san_count)
+    ! call iamas_log_write('## mean rvfddaten: $r',realArgs=(/san_mean/), messageType=iAMAS_LOG_WARN)
+
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! END OF LOG PRINTOUT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+   
+   !check to see if this is the last time step within the current FDDA target data interval and 
+   !if so, save the current "new" targets as the "old" targets for the next time step
+    if(mod(xtime_s+config_dt,fdda_int)/fdda_int .lt. tfrac) then
+       ! call iamas_log_write('## last time step routine initiated', messageType=iAMAS_LOG_WARN)
+       th_fdda_old = th_fdda_new
+       qv_fdda_old = qv_fdda_new
+       u_fdda_old = u_fdda_new
+       v_fdda_old = v_fdda_new
+    endif
+   
+    ! call iamas_log_write('--- exit apply_fdda',messageType=iAMAS_LOG_WARN)
+   
+    end subroutine apply_fdda
+   
+   !==================================================================================================
+    end module iamas_atmphys_fdda
+   !==================================================================================================
+   

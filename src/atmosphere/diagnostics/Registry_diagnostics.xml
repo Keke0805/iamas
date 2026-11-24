@@ -1,0 +1,33 @@
+<!-- ******************************* -->
+<!-- Begin includes from diagnostics -->
+<!-- ******************************* -->
+
+#include "Registry_template.xml"
+
+<!-- isobaric diagnostics -->
+#include "Registry_isobaric.xml"
+
+<!-- convective diagnostics -->
+#include "Registry_convective.xml"
+
+<!-- PV diagnostics -->
+#include "Registry_pv.xml"
+
+<!-- soundings -->
+#include "Registry_soundings.xml"
+
+<!-- aerosols -->
+#include "Registry_aerosols.xml"
+
+<!-- column diagnostics -->
+#include "Registry_column.xml"
+
+<!-- isohypsic diagnostics -->
+#include "Registry_isohypsic.xml"
+
+<!-- cldfracmax diagnostics -->
+#include "Registry_cldfracmax.xml"
+
+<!-- ******************************* -->
+<!-- End includes from diagnostics -->
+<!-- ******************************* -->

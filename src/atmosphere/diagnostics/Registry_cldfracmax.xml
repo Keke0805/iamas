@@ -1,0 +1,10 @@
+<!-- ******************************* -->
+<!--    Cldfrac Max diagnostics      -->
+<!-- ******************************* -->
+
+<var_struct name="diag" time_levs="1">
+
+        <var name="cldfrac_max" type="real" dimensions="nCells Time" units="unitless"
+             description="Maximum column cloud fraction"/>
+
+</var_struct>

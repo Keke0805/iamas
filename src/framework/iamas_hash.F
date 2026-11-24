@@ -1,0 +1,182 @@
+! Copyright (c) 2013,  Los Alamos National Security, LLC (LANS)
+! and the University Corporation for Atmospheric Research (UCAR).
+!
+! Unless noted otherwise source code is licensed under the BSD license.
+! Additional copyright and license information can be found in the LICENSE file
+! distributed with this code, or at https://git.ustc.edu.cn/ustc_lacar/development/iamas/-/blob/iAMAS/LICENSE
+!
+!***********************************************************************
+!
+!  iamas_hash
+!
+!> \brief   iAMAS Hash table module
+!> \author  Michael Duda
+!> \date    03/27/13
+!> \details 
+!> This module provides A dictionary/hashtable with insert, search, and remove routines.
+!
+!-----------------------------------------------------------------------
+module iamas_hash
+
+   use iamas_derived_types
+ 
+   contains
+ 
+!***********************************************************************
+!
+!  routine iamas_hash_init
+!
+!> \brief   iAMAS Hash table init routine
+!> \author  Michael Duda
+!> \date    03/27/13
+!> \details 
+!> This routine initializes a hashtable.
+!
+!-----------------------------------------------------------------------
+   subroutine iamas_hash_init(h)!{{{
+   
+     implicit none
+ 
+     ! Arguments
+     type (hashtable), intent(inout) :: h !< Input/Output: Hash table
+ 
+     ! Local variables
+     integer :: i
+
+     h%size = 0
+ 
+     do i=1,TABLESIZE
+        nullify(h%table(i)%p)
+     end do
+ 
+   end subroutine iamas_hash_init!}}}
+ 
+ 
+!***********************************************************************
+!
+!  routine iamas_hash_insert
+!
+!> \brief   iAMAS Hash table insert routine
+!> \author  Michael Duda
+!> \date    03/27/13
+!> \details 
+!> This routine inserts a key into a hashtable. If the key already exists in the hash table,
+!> a second copy of the key is added to the table.
+!
+!-----------------------------------------------------------------------
+   subroutine iamas_hash_insert(h, key)!{{{
+   
+     implicit none
+ 
+     ! Arguments
+     integer, intent(in) :: key !< Input: Key
+     type (hashtable), intent(inout) :: h !< Input/Output: Hashtable
+ 
+     ! Local variables
+     integer :: hashval
+     type (hashnode), pointer :: hn 
+ 
+     hashval = mod(key, TABLESIZE) + 1  
+    
+     allocate(hn) 
+     hn%key = key
+     hn%next => h%table(hashval)%p
+     h%table(hashval)%p => hn 
+
+     h%size = h%size + 1
+ 
+   end subroutine iamas_hash_insert!}}}
+ 
+!***********************************************************************
+!
+!  logical function iamas_hash_search
+!
+!> \brief   iAMAS Hash table search routine
+!> \author  Michael Duda
+!> \date    03/27/13
+!> \details 
+!> This function searches for a key within a hashtable. If the key is found TRUE is returned, and FALSE is return otherwise.
+!
+!-----------------------------------------------------------------------
+   logical function iamas_hash_search(h, key)!{{{
+   
+      implicit none
+  
+      ! Arguments
+      integer, intent(in) :: key !< Input: Key
+      type (hashtable), intent(inout) :: h !< Input/Output: Hashtable
+  
+      ! Local variables
+      integer :: hashval
+      type (hashnode), pointer :: cursor 
+  
+      iamas_hash_search = .false.
+  
+      hashval = mod(key, TABLESIZE) + 1  
+
+      cursor => h%table(hashval)%p
+      do while(associated(cursor))
+         if (cursor%key == key) then
+            iamas_hash_search = .true.
+            return 
+         else
+            cursor => cursor%next 
+         end if
+      end do
+    
+      return
+ 
+   end function iamas_hash_search
+
+
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
+   ! Name: hash_size
+   !
+   ! Purpose: Returns the number of items in the hash table h.
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
+   integer function iamas_hash_size(h)
+
+      implicit none
+
+      ! Arguments
+      type (hashtable) :: h
+
+      iamas_hash_size = h%size
+
+      return
+
+   end function iamas_hash_size
+ 
+ 
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
+   ! Name: hash_destroy
+   !
+   ! Purpose: Frees all memory associated with hashtable h. This routine may be
+   !   used to remove all entries from a hashtable.
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
+   subroutine iamas_hash_destroy(h)
+   
+      implicit none
+  
+      ! Arguments
+      type (hashtable), intent(inout) :: h
+  
+      ! Local variables
+      integer :: i
+      type (hashnode), pointer :: cursor, cursor_prev
+     
+      do i=1,TABLESIZE
+         cursor => h%table(i)%p
+         do while(associated(cursor))
+            cursor_prev => cursor
+            cursor => cursor%next
+            deallocate(cursor_prev)
+         end do 
+         nullify(h%table(i)%p)
+      end do 
+
+      h%size = 0
+ 
+   end subroutine iamas_hash_destroy!}}}
+ 
+end module iamas_hash

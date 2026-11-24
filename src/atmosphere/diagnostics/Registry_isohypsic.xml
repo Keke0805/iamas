@@ -1,0 +1,43 @@
+<!-- ********************************************** -->
+<!--            Isohypsic diagnostics               -->
+<!-- Vertically interpolate to corresponding height -->
+<!-- To modify or add new heights, adjust the       -->
+<!-- definition of the dim nIsohypsicLevels below,  -->
+<!-- and update the information of isohypsic_levels -->
+<!-- in isohypsic_diagnostics.F                     -->
+<!-- ********************************************** -->
+
+<dims>
+        <dim name="nIsohypsicLevels"         definition="7"
+             description="Number of isohypsic levels to which variables will be vertically interpolated"/>
+
+</dims>
+
+
+<var_struct name="diag" time_levs="1">
+
+        <var name="temperature_isohypsic" type="real" dimensions="nIsohypsicLevels nCells Time" units="K"
+             description="Temperature interpolated to isohypsic surfaces defined in isohypsic_levels"/>
+
+        <var name="u_isohypsic" type="real" dimensions="nIsohypsicLevels nCells Time" units="m s^{-1}"
+             description="Zonal wind interpolated to isohypsic surfaces defined in isohypsic_levels"/>
+
+        <var name="v_isohypsic" type="real" dimensions="nIsohypsicLevels nCells Time" units="m s^{-1}"
+             description="Meridional wind interpolated to isohypsic surfaces defined in isohypsic_levels"/>
+
+        <var name="relhum_isohypsic" type="real" dimensions="nIsohypsicLevels nCells Time" units="percent"
+             description="Relative humidity interpolated to isohypsic surfaces defined in isohypsic_levels"/>
+
+        <var name="pressure_isohypsic" type="real" dimensions="nIsohypsicLevels nCells Time" units="Pa"
+             description="Pressure interpolated to isohypsic surfaces defined in isohypsic_levels"/>
+
+	<var name="w_isohypsic" type="real" dimensions="nIsohypsicLevels nCells Time" units="m s{-1}"
+	     description="Vertical velocity interpolated to isohypsic surfaces defined in isohypsic_levels"/>
+
+	<var name="qc_isohypsic" type="real" dimensions="nIsohypsicLevels nCells Time" units="kg kg{-1}"
+             description="Cloud Water mixing ratio interpolated to isohypsic surfaces defined in isohypsic_levels"/>
+
+        <var name="isohypsic_levels" type="real" dimensions="nIsohypsicLevels" units="m"
+             description="Levels for vertical interpolation to isohypsic surfaces"/>
+
+</var_struct>

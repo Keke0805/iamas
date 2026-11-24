@@ -1,0 +1,11 @@
+{
+  "incremental_sync": true,
+  "lowercase_intrinsics": true,
+  "hover_signature": true,
+  "use_signature_help": true,
+  "excl_paths": ["tools/**"],
+  "excl_suffixes": [".atmosphere", ".init_atmosphere", ".pt"],
+  "include_dirs": ["inc/**"],
+  "pp_suffixes": [".F", ".h"],
+  "pp_defs": { "MPI_Comm": "integer" }
+}
